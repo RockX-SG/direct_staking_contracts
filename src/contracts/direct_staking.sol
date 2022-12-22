@@ -24,6 +24,16 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         uint256 amount;
     }
 
+    // structure to record taking info.
+    struct ValidatorInfo {
+        bytes pubkey;   // pre-registered public keys
+
+        // binded when user stakes.
+        address withdrawalAddress;
+        address claimAddress;
+        uint256 userid; // userid is a reference data
+    }
+
     /**
         Incorrect storage preservation:
 
@@ -63,15 +73,14 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     address public redeemContract;          // redeeming contract for user to pull ethers
     
     // pubkeys pushed by owner
-    bytes [] private validatorRegistry;
-    mapping(bytes32 => uint256) private pubkeyIndices; // indices of validatorRegistry by pubkey hash, starts from 1
+    // [0, 1,2,3,{4,5,6,7}, 8,9, 10]
+    ValidatorInfo [] private validatorRegistry;
 
-    // credentials binded to validator Id when user stakes
-    mapping(uint256 => bytes32) private bindedWithdrawalCredentials; // indices of validatorRegistry by pubkey hash, starts from 1
-
-
-    // next validator id
+    // next node id
     uint256 private nextValidatorId;
+    
+    // unbinded validator id
+    uint256 private nextValidatorUnBinded;
    
     /**
      * @dev empty reserved space for future adding of variables
@@ -122,28 +131,20 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     function registerValidator(bytes calldata pubkey) external onlyRole(REGISTRY_ROLE) {
         require(pubkey.length == PUBKEY_LENGTH, "INCONSISTENT_PUBKEY_LEN");
 
-        bytes32 pubkeyHash = keccak256(pubkey);
-        require(pubkeyIndices[pubkeyHash] == 0, "DUPLICATED_PUBKEY");
-        validatorRegistry.push(pubkey);
-        pubkeyIndices[pubkeyHash] = validatorRegistry.length;
+        ValidatorInfo memory info;
+        info.pubkey = pubkey;
+        validatorRegistry.push(info);
     }
 
     /**
-     * @dev replace a validator in case of msitakes
+     * @dev replace a validator in case of mistakes
      */
-    function replaceValidator(bytes calldata oldpubkey, bytes calldata pubkey) external onlyRole(REGISTRY_ROLE) {
+    function replaceValidator(uint256 idx, bytes calldata pubkey) external onlyRole(REGISTRY_ROLE) {
         require(pubkey.length == PUBKEY_LENGTH, "INCONSISTENT_PUBKEY_LEN");
 
-        // mark old pub key to false
-        bytes32 oldPubKeyHash = keccak256(oldpubkey);
-        require(pubkeyIndices[oldPubKeyHash] > 0, "PUBKEY_NOT_EXSITS");
-        uint256 index = pubkeyIndices[oldPubKeyHash] - 1;
-        delete pubkeyIndices[oldPubKeyHash];
-
-        // set new pubkey
-        bytes32 pubkeyHash = keccak256(pubkey);
-        validatorRegistry[index] = pubkey;
-        pubkeyIndices[pubkeyHash] = index+1;
+        ValidatorInfo memory info;
+        info.pubkey = pubkey;
+        validatorRegistry[idx] = info;
     }
 
     /**
@@ -151,13 +152,11 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      */
     function registerValidators(bytes [] calldata pubkeys) external onlyRole(REGISTRY_ROLE) {        
         uint256 n = pubkeys.length;
+        ValidatorInfo memory info;
         for(uint256 i=0;i<n;i++) {
             require(pubkeys[i].length == PUBKEY_LENGTH, "INCONSISTENT_PUBKEY_LEN");
-
-            bytes32 pubkeyHash = keccak256(pubkeys[i]);
-            require(pubkeyIndices[pubkeyHash] == 0, "DUPLICATED_PUBKEY");
-            validatorRegistry.push(pubkeys[i]);
-            pubkeyIndices[pubkeyHash] = validatorRegistry.length;
+            info.pubkey = pubkeys[i];
+            validatorRegistry.push(info);
         }
     }
     
@@ -171,8 +170,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
         for (uint256 i = 0;i<signatures.length;i++) {
             require(signatures[i].length == SIGNATURE_LENGTH, "INCONSISTENT_SIG_LEN");
-            _stake(validatorRegistry[fromId + i], signatures[i], bindedWithdrawalCredentials[fromId + i]);
-            delete bindedWithdrawalCredentials[fromId + i];
+            _deposit(validatorRegistry[fromId + i].pubkey, signatures[i], validatorRegistry[fromId + i].withdrawalAddress);
             nextValidatorId++;
         }
     }
@@ -194,19 +192,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     }
     
     /**
-     * @dev return a batch of validators credential
-     */
-    function getRegisteredValidators(uint256 idx_from, uint256 idx_to) external view returns (bytes [] memory pubkeys) {
-        pubkeys = new bytes[](idx_to - idx_from);
-
-        uint counter = 0;
-        for (uint i = idx_from; i < idx_to;i++) {
-            pubkeys[counter] = validatorRegistry[i];
-            counter++;
-        }
-    }
-
-    /**
      * @dev return next validator id
      */
     function getNextValidatorId() external view returns (uint256) { return nextValidatorId; }
@@ -219,16 +204,20 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      * ======================================================================================
      */
     /**
-     * @dev stake
+     * @dev user stakes
      */
-    function stake(uint256 deadline) external payable nonReentrant whenNotPaused {
+    function stake(address withdrawaddr, address claimaddr, uint256 userid, uint256 deadline) external payable nonReentrant whenNotPaused {
         require(block.timestamp < deadline, "TRANSACTION_EXPIRED");
         require(msg.value > 0, "MINT_ZERO");
         require(msg.value % (32 ether) == 0, "ROUND_TO_32ETHERS");
 
-        uint256 count = msg.value % 32 ether;
+        uint256 count = msg.value / 32 ether;
         for (uint256 i = 0;i < count;i++) {
-            
+            // bind user's withdrawal credential
+            validatorRegistry[nextValidatorUnBinded].withdrawalAddress = withdrawaddr;
+            validatorRegistry[nextValidatorUnBinded].claimAddress = claimaddr;
+            validatorRegistry[nextValidatorUnBinded].userid = userid;
+            nextValidatorUnBinded++;
         }
     }
 
@@ -244,10 +233,15 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev Invokes a deposit call to the official Deposit contract
      */
-    function _stake(bytes memory pubkey, bytes memory signature, bytes32 withdrawal_credential) internal {
+    function _deposit(bytes memory pubkey, bytes memory signature, address withdrawal_address) internal {
         uint256 value = DEPOSIT_SIZE;
         uint256 depositAmount = DEPOSIT_SIZE / DEPOSIT_AMOUNT_UNIT;
         assert(depositAmount * DEPOSIT_AMOUNT_UNIT == value);    // properly rounded
+
+        // initiate withdrawal credential 
+        // uint8('0x1') + 11 bytes(0) + this.address
+        bytes memory cred = abi.encodePacked(bytes1(0x01), new bytes(11), withdrawal_address);
+        bytes32 withdrawal_credential = BytesLib.toBytes32(cred, 0);
 
         // Compute deposit data root (`DepositData` hash tree root)
         // https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa#code
