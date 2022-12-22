@@ -206,14 +206,16 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev user stakes
      */
-    function stake(address withdrawaddr, address claimaddr, uint256 userid, uint256 deadline) external payable nonReentrant whenNotPaused {
+    function stake(address withdrawaddr, address claimaddr, uint256 userid, uint256 fee, uint256 deadline) external payable nonReentrant whenNotPaused {
         require(block.timestamp < deadline, "TRANSACTION_EXPIRED");
-        require(msg.value > 0, "MINT_ZERO");
-        require(msg.value % (32 ether) == 0, "ROUND_TO_32ETHERS");
+        
+        uint256 ethersToStake = msg.value - fee;
+        require(ethersToStake > 0, "MINT_ZERO");
+        require(ethersToStake % (32 ether) == 0, "ROUND_TO_32ETHERS");
 
-        uint256 count = msg.value / 32 ether;
+        uint256 count = ethersToStake / 32 ether;
         for (uint256 i = 0;i < count;i++) {
-            // bind user's withdrawal credential
+            // bind user's address
             validatorRegistry[nextValidatorUnBinded].withdrawalAddress = withdrawaddr;
             validatorRegistry[nextValidatorUnBinded].claimAddress = claimaddr;
             validatorRegistry[nextValidatorUnBinded].userid = userid;
