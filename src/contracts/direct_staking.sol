@@ -32,6 +32,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         address withdrawalAddress;
         address claimAddress;
         uint256 userid; // userid is a reference data
+
+        // mark as deposited to official contract
+        bool deposited;
     }
 
     /**
@@ -76,11 +79,15 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     // [0, 1,2,3,{4,5,6,7}, 8,9, 10]
     ValidatorInfo [] private validatorRegistry;
 
+    // below are 3 pointers to track staking procedure
     // next node id
     uint256 private nextValidatorId;
     
-    // unbinded validator id
+    // next unbinded validator
     uint256 private nextValidatorUnBinded;
+
+    // next validator awaiting to deposit
+    uint256 private nextValidatorToDeposit;
    
     /**
      * @dev empty reserved space for future adding of variables
@@ -165,14 +172,17 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      * @dev batch deposit with offline signed signatures 
      */
     function batchDeposit(uint256 fromId, bytes [] calldata signatures) external onlyRole(REGISTRY_ROLE) {
-        require(fromId == nextValidatorId, "MISMATCHED_VALIDATOR_ID");
+        require(fromId == nextValidatorToDeposit, "MISMATCHED_VALIDATOR_ID");
         require(fromId + signatures.length <= validatorRegistry.length, "TOO_MANY_SIGNATURES");
 
         for (uint256 i = 0;i<signatures.length;i++) {
             require(signatures[i].length == SIGNATURE_LENGTH, "INCONSISTENT_SIG_LEN");
             _deposit(validatorRegistry[fromId + i].pubkey, signatures[i], validatorRegistry[fromId + i].withdrawalAddress);
-            nextValidatorId++;
+            validatorRegistry[fromId + i].deposited = true;
         }
+
+        // move pointer
+        nextValidatorToDeposit += signatures.length;
     }
 
 
@@ -197,9 +207,19 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     function getNextValidatorId() external view returns (uint256) { return nextValidatorId; }
 
     /**
+     * @dev return next validator id
+     */
+    function getNextValidatorUnBinded() external view returns (uint256) { return nextValidatorUnBinded; }
+
+    /**
+     * @dev return next validator id
+     */
+    function getNextValidatorToDeposit() external view returns (uint256) { return nextValidatorToDeposit; }
+
+    /**
      * ======================================================================================
      * 
-     * EXTERNAL FUNCTIONS
+     * USER EXTERNAL FUNCTIONS
      * 
      * ======================================================================================
      */
@@ -208,7 +228,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      */
     function stake(address withdrawaddr, address claimaddr, uint256 userid, uint256 fee, uint256 deadline) external payable nonReentrant whenNotPaused {
         require(block.timestamp < deadline, "TRANSACTION_EXPIRED");
-        
+
         uint256 ethersToStake = msg.value - fee;
         require(ethersToStake > 0, "MINT_ZERO");
         require(ethersToStake % (32 ether) == 0, "ROUND_TO_32ETHERS");
