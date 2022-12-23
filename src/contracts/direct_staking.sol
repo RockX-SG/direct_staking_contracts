@@ -32,9 +32,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         address withdrawalAddress;
         address claimAddress;
         uint256 userid; // userid is a reference data
-
-        // mark as deposited to official contract
-        bool deposited;
     }
 
     /**
@@ -178,7 +175,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         for (uint256 i = 0;i<signatures.length;i++) {
             require(signatures[i].length == SIGNATURE_LENGTH, "INCONSISTENT_SIG_LEN");
             _deposit(validatorRegistry[fromId + i].pubkey, signatures[i], validatorRegistry[fromId + i].withdrawalAddress);
-            validatorRegistry[fromId + i].deposited = true;
         }
 
         // move pointer
