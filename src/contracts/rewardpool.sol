@@ -77,7 +77,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      */
     // to join the reward pool
     function joinpool(address claimaddr, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        syncBalance();
+        updateReward();
 
         UserInfo storage info = userInfo[claimaddr];
 
@@ -94,7 +94,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
 
     // claimRewards
     function claimRewards(address beneficiary, uint256 amountRequired) external nonReentrant {
-        syncBalance();
+        updateReward();
 
         UserInfo storage info = userInfo[msg.sender];
 
@@ -111,9 +111,9 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
     }
 
     /**
-     * @dev balance sync of tx fee
+     * @dev updateReward of tx fee
      */
-    function syncBalance() public {
+    function updateReward() public {
         require(address(this).balance >= accountedBalance);
         uint256 newReward = address(this).balance - accountedBalance;
         if (newReward > 0) {
