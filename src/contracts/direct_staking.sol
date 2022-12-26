@@ -73,15 +73,18 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     address public redeemContract;          // redeeming contract for user to pull ethers
     
     // pubkeys pushed by owner
-    // [0, 1,2,3,{4,5,6,7}, 8,9, 10]
+    // [0, 1,2,3,{4,5,6,7}, 8,9, 10], which:
+    //  0-3: to deposited to official contract,
+    //  4-7: user deposited, awaiting to be signed and then to deposit to official contract,
+    //  8-10: registered pubkeys but not used.
     ValidatorInfo [] private validatorRegistry;
 
     // below are 3 pointers to track staking procedure
     // next node id
-    uint256 private nextValidatorId;
+    uint256 private nextValidatorToRegister;
     
-    // next unbinded validator
-    uint256 private nextValidatorUnBinded;
+    // next next validator to bind to a user;
+    uint256 private nextValidatorToBind;
 
     // next validator awaiting to deposit
     uint256 private nextValidatorToDeposit;
@@ -163,14 +166,13 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             validatorRegistry.push(info);
         }
     }
-    
    
     /**
      * @dev batch deposit with offline signed signatures 
      */
     function batchDeposit(uint256 fromId, bytes [] calldata signatures) external onlyRole(REGISTRY_ROLE) {
         require(fromId == nextValidatorToDeposit, "MISMATCHED_VALIDATOR_ID");
-        require(fromId + signatures.length <= validatorRegistry.length, "TOO_MANY_SIGNATURES");
+        require(fromId + signatures.length <= nextValidatorToBind, "TOO_MANY_SIGNATURES");
 
         for (uint256 i = 0;i<signatures.length;i++) {
             require(signatures[i].length == SIGNATURE_LENGTH, "INCONSISTENT_SIG_LEN");
@@ -193,19 +195,31 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev return number of registered validator
      */
+    function getValidatorInfo(uint256 idx) external view returns (
+        bytes memory pubkey,
+        address withdrawalAddress,
+        address claimAddress,
+        uint256 userid
+     ){
+        return (validatorRegistry[idx].pubkey, validatorRegistry[idx].withdrawalAddress, validatorRegistry[idx].claimAddress, validatorRegistry[idx].userid);
+    }
+
+    /**
+     * @dev return number of registered validator
+     */
     function getRegisteredValidatorsCount() external view returns (uint256) {
         return validatorRegistry.length;
     }
     
     /**
-     * @dev return next validator id
+     * @dev return next validator ID to register
      */
-    function getNextValidatorId() external view returns (uint256) { return nextValidatorId; }
+    function getNextValidatorToRegister() external view returns (uint256) { return nextValidatorToRegister; }
 
     /**
-     * @dev return next validator id
+     * @dev return next validator ID to bind to a user
      */
-    function getNextValidatorUnBinded() external view returns (uint256) { return nextValidatorUnBinded; }
+    function getNextValidatorToBind() external view returns (uint256) { return nextValidatorToBind; }
 
     /**
      * @dev return next validator id
@@ -232,10 +246,10 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         uint256 count = ethersToStake / 32 ether;
         for (uint256 i = 0;i < count;i++) {
             // bind user's address
-            validatorRegistry[nextValidatorUnBinded].withdrawalAddress = withdrawaddr;
-            validatorRegistry[nextValidatorUnBinded].claimAddress = claimaddr;
-            validatorRegistry[nextValidatorUnBinded].userid = userid;
-            nextValidatorUnBinded++;
+            validatorRegistry[nextValidatorToBind].withdrawalAddress = withdrawaddr;
+            validatorRegistry[nextValidatorToBind].claimAddress = claimaddr;
+            validatorRegistry[nextValidatorToBind].userid = userid;
+            nextValidatorToBind++;
         }
     }
 
@@ -305,17 +319,4 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      *
      * ======================================================================================
      */
-    event ValidatorActivated(uint256 nextValidatorId);
-    event ValidatorStopped(uint256 stoppedCount, uint256 stoppedBalance);
-    event RevenueAccounted(uint256 amount);
-    event ValidatorSlashedStopped(uint256 stoppedCount, uint256 slashed);
-    event ManagerAccountSet(address account);
-    event ManagerFeeSet(uint256 milli);
-    event ManagerFeeWithdrawed(uint256 amount, address);
-    event WithdrawCredentialSet(bytes32 withdrawCredential);
-    event DebtQueued(address creditor, uint256 amountEther);
-    event XETHContractSet(address addr);
-    event DepositContractSet(address addr);
-    event RedeemContractSet(address addr);
-    event BalanceSynced(uint256 diff);
 }
