@@ -17,12 +17,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     using SafeERC20 for IERC20;
     using Address for address payable;
     using Address for address;
-    
-    // track ether debts to return to async caller
-    struct Debt {
-        address account;
-        uint256 amount;
-    }
 
     // structure to record taking info.
     struct ValidatorInfo {
@@ -69,8 +63,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     uint256 private constant PUBKEY_LENGTH = 48;
     
     address public ethDepositContract;      // ETH 2.0 Deposit contract
-    address public xETHAddress;             // xETH token address
-    address public redeemContract;          // redeeming contract for user to pull ethers
     
     // pubkeys pushed by owner
     // [0, 1,2,3,{4,5,6,7}, 8,9, 10], which:
@@ -241,9 +233,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
         uint256 ethersToStake = msg.value - fee;
         require(ethersToStake > 0, "MINT_ZERO");
-        require(ethersToStake % (32 ether) == 0, "ROUND_TO_32ETHERS");
+        require(ethersToStake % DEPOSIT_SIZE == 0, "ROUND_TO_32ETHERS");
 
-        uint256 count = ethersToStake / 32 ether;
+        uint256 count = ethersToStake / DEPOSIT_SIZE;
         for (uint256 i = 0;i < count;i++) {
             // bind user's address
             validatorRegistry[nextValidatorToBind].withdrawalAddress = withdrawaddr;
