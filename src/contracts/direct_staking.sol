@@ -303,12 +303,4 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         ret[6] = bytesValue[1];
         ret[7] = bytesValue[0];
     }
-
-    /**
-     * ======================================================================================
-     * 
-     * ROCKX SYSTEM EVENTS
-     *
-     * ======================================================================================
-     */
 }
