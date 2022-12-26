@@ -22,16 +22,16 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
     uint256 private constant MULTIPLIER = 1e18; 
 
     struct UserInfo {
+        uint256 accSharePoint; // acc share point for last user balance change
         uint256 amount; // How many tokens the user has provided.
         uint256 rewardBalance;  // pending distribution
-        uint256 rewardDebt; // reward debts
     }
     
-    uint256 private totaStaked;
-    uint256 private accShare;
-    mapping(address => UserInfo) public userInfo;
+    uint256 private totalStaked;    // total staked ethers
+    uint256 private accShare;   // current accumulated shares
+    mapping(address => UserInfo) public userInfo; // claimaddr -> info
 
-    uint256 lastBalance;
+    uint256 accountedBalance;   // for tracking of overall deposits
     
     /** 
      * ======================================================================================
@@ -82,30 +82,31 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         UserInfo storage info = userInfo[claimaddr];
 
         // settle current pending distribution
-        info.rewardBalance += accShare * info.amount / MULTIPLIER - info.rewardDebt;
+        info.rewardBalance += (accShare - info.accSharePoint) * info.amount / MULTIPLIER;
 
         // update amount & rewardDebt
         info.amount += amount;
-        info.rewardDebt = accShare * info.amount / MULTIPLIER;
+        info.accSharePoint = accShare;
 
         // update total staked
-        totaStaked += amount;
+        totalStaked += amount;
     }
 
     // claimRewards
-    function claimRewards(address beneficiary, uint256 amountRequired) external {
+    function claimRewards(address beneficiary, uint256 amountRequired) external nonReentrant {
         syncBalance();
 
         UserInfo storage info = userInfo[msg.sender];
 
         // settle current pending distribution
-        info.rewardBalance += accShare * info.amount / MULTIPLIER - info.rewardDebt;
-        info.rewardDebt = accShare * info.amount / MULTIPLIER;
+        info.rewardBalance += (accShare - info.accSharePoint) * info.amount / MULTIPLIER;
+        info.accSharePoint = accShare;
 
         // check
         require(info.rewardBalance >= amountRequired, "INSUFFICIENT_REWARD");
 
-        // transfer
+        // account & transfer
+        _balanceDecrease(amountRequired);
         payable(beneficiary).sendValue(amountRequired);
     }
 
@@ -113,11 +114,11 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * @dev balance sync of tx fee
      */
     function syncBalance() public {
-        require(address(this).balance >= lastBalance);
-        uint256 newReward = address(this).balance - lastBalance;
+        require(address(this).balance >= accountedBalance);
+        uint256 newReward = address(this).balance - accountedBalance;
         if (newReward > 0) {
-            accShare += newReward * MULTIPLIER / totaStaked;
-            lastBalance = address(this).balance;
+            accShare += newReward * MULTIPLIER / totalStaked;
+            accountedBalance = address(this).balance;
         }
     }
 
@@ -128,12 +129,23 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * 
      * ======================================================================================
      */
-
      function getPendingReward(address claimaddr) external view returns (uint256) {
-        require(address(this).balance >= lastBalance);
-        uint256 newReward = address(this).balance - lastBalance;
+        require(address(this).balance >= accountedBalance);
+        uint256 newReward = address(this).balance - accountedBalance;
         UserInfo storage info = userInfo[claimaddr];
 
-        return info.rewardBalance + (accShare + newReward * MULTIPLIER / totaStaked) * info.amount / MULTIPLIER - info.rewardDebt;
+        return info.rewardBalance + (accShare + newReward * MULTIPLIER / totalStaked - info.accSharePoint)  * info.amount / MULTIPLIER;
      }
+
+    /** 
+     * ======================================================================================
+     * 
+     * INTERNAL FUNCTIONS
+     * 
+     * ======================================================================================
+     */
+
+    function _balanceIncrease(uint256 amount) internal { accountedBalance += amount; }
+    function _balanceDecrease(uint256 amount) internal { accountedBalance -= amount; }
+
 }
