@@ -27,6 +27,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         address claimAddress;
         uint256 amount;
         uint256 extraData; // a 256bit extra data, could be used in DID to ref a user
+
+        // mark exiting
+        bool exiting;
     }
 
     /**
@@ -71,6 +74,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     //  4-7: user deposited, awaiting to be signed and then to be deposit to official contract,
     //  8-10: registered unused pubkeys 
     ValidatorInfo [] private validatorRegistry;
+
+    // user apply for validator exit
+    uint256 [] private exitQueue;
 
     // below are 3 pointers to track staking procedure
     // next node id
@@ -240,6 +246,11 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     function getNextValidatorToDeposit() external view returns (uint256) { return nextValidatorToDeposit; }
 
     /**
+     * @dev return exit queue
+     */
+    function getExitQueue() external view returns (uint256[] memory) { return exitQueue; }
+
+    /**
      * ======================================================================================
      * 
      * USER EXTERNAL FUNCTIONS
@@ -249,7 +260,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev user stakes
      */
-    function stake(address withdrawaddr, address claimaddr, uint256 extradata, uint256 fee, uint256 deadline) external payable nonReentrant whenNotPaused {
+    function stake(address withdrawaddr, address claimaddr, uint256 extradata, uint256 fee, uint256 deadline) external payable whenNotPaused {
         require(block.timestamp < deadline, "TRANSACTION_EXPIRED");
 
         uint256 ethersToStake = msg.value - fee;
@@ -265,6 +276,17 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             validatorRegistry[nextValidatorToBind].amount = DEPOSIT_SIZE;
             nextValidatorToBind++;
         }
+    }
+
+    /**
+     * @dev user exits his validator
+     */
+    function exit(uint256 validatorId) external whenNotPaused {
+        require(msg.sender == validatorRegistry[validatorId].withdrawalAddress, "NO_PRIV");
+        require(!validatorRegistry[validatorId].exiting, "EXITING");
+
+        validatorRegistry[validatorId].exiting = true;
+        exitQueue.push(validatorId);
     }
 
     /** 
