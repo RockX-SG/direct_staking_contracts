@@ -52,7 +52,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     // Always extend storage instead of modifying it
     // Variables in implementation v0 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
-    bytes32 public constant ORACLE_ROLE = keccak256("ORACLE_ROLE");
     bytes32 public constant REGISTRY_ROLE = keccak256("REGISTRY_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     uint256 public constant DEPOSIT_SIZE = 32 ether;
@@ -62,13 +61,14 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     uint256 private constant SIGNATURE_LENGTH = 96;
     uint256 private constant PUBKEY_LENGTH = 48;
     
-    address public ethDepositContract;      // ETH 2.0 Deposit contract
+    address public ethDepositContract;  // ETH 2.0 Deposit contract
+    address public rewardPool; // reward pool address
     
     // pubkeys pushed by owner
     // [0, 1,2,3,{4,5,6,7}, 8,9, 10], which:
-    //  0-3: to deposited to official contract,
-    //  4-7: user deposited, awaiting to be signed and then to deposit to official contract,
-    //  8-10: registered pubkeys but not used.
+    //  0-3: deposited to official contract,
+    //  4-7: user deposited, awaiting to be signed and then to be deposit to official contract,
+    //  8-10: registered unused pubkeys 
     ValidatorInfo [] private validatorRegistry;
 
     // below are 3 pointers to track staking procedure
@@ -118,7 +118,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         __ReentrancyGuard_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(ORACLE_ROLE, msg.sender);
         _grantRole(REGISTRY_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
         _grantRole(MANAGER_ROLE, msg.sender);
@@ -175,6 +174,23 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         nextValidatorToDeposit += signatures.length;
     }
 
+    /**
+     * @dev set reward pool contract address
+     */
+    function setRewardPool(address _rewardPool) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        rewardPool = _rewardPool;
+
+        emit RewardPoolContractSet(_rewardPool);
+    }
+
+    /**
+     * @dev set eth deposit contract address
+     */
+    function setETHDepositContract(address _ethDepositContract) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        ethDepositContract = _ethDepositContract;
+
+        emit DepositContractSet(_ethDepositContract);
+    }
 
     /**
      * ======================================================================================
@@ -303,4 +319,15 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         ret[6] = bytesValue[1];
         ret[7] = bytesValue[0];
     }
+
+    
+    /**
+     * ======================================================================================
+     * 
+     * SYSTEM EVENTS
+     *
+     * ======================================================================================
+     */
+    event RewardPoolContractSet(address addr);
+    event DepositContractSet(address addr);
 }

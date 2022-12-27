@@ -28,10 +28,11 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
     }
     
     uint256 private totalStaked;    // total staked ethers
-    uint256 private accShare;   // current accumulated shares
+    uint256 private accShare;   // current earnings per share
     mapping(address => UserInfo) public userInfo; // claimaddr -> info
 
     uint256 accountedBalance;   // for tracking of overall deposits
+
     
     /** 
      * ======================================================================================
@@ -83,8 +84,6 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
 
         // settle current pending distribution
         info.rewardBalance += (accShare - info.accSharePoint) * info.amount / MULTIPLIER;
-
-        // update amount & rewardDebt
         info.amount += amount;
         info.accSharePoint = accShare;
 
