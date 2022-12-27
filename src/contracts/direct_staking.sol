@@ -25,7 +25,8 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         // binded when user stakes.
         address withdrawalAddress;
         address claimAddress;
-        uint256 userid; // userid is a reference data
+        uint256 amount;
+        uint256 extraData; // a 256bit extra data, could be used in DID to ref a user
     }
 
     /**
@@ -166,8 +167,12 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         require(fromId + signatures.length <= nextValidatorToBind, "TOO_MANY_SIGNATURES");
 
         for (uint256 i = 0;i<signatures.length;i++) {
+            ValidatorInfo storage reg = validatorRegistry[fromId + i];
             require(signatures[i].length == SIGNATURE_LENGTH, "INCONSISTENT_SIG_LEN");
-            _deposit(validatorRegistry[fromId + i].pubkey, signatures[i], validatorRegistry[fromId + i].withdrawalAddress);
+            _deposit(reg.pubkey, signatures[i], reg.withdrawalAddress);
+
+            // join the reward pool once it's deposited to official
+            IRewardPool(rewardPool).joinpool(reg.claimAddress, reg.amount);
         }
 
         // move pointer
@@ -209,7 +214,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         address claimAddress,
         uint256 userid
      ){
-        return (validatorRegistry[idx].pubkey, validatorRegistry[idx].withdrawalAddress, validatorRegistry[idx].claimAddress, validatorRegistry[idx].userid);
+        return (validatorRegistry[idx].pubkey, validatorRegistry[idx].withdrawalAddress, validatorRegistry[idx].claimAddress, validatorRegistry[idx].extraData);
     }
 
     /**
@@ -244,7 +249,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev user stakes
      */
-    function stake(address withdrawaddr, address claimaddr, uint256 userid, uint256 fee, uint256 deadline) external payable nonReentrant whenNotPaused {
+    function stake(address withdrawaddr, address claimaddr, uint256 extradata, uint256 fee, uint256 deadline) external payable nonReentrant whenNotPaused {
         require(block.timestamp < deadline, "TRANSACTION_EXPIRED");
 
         uint256 ethersToStake = msg.value - fee;
@@ -256,13 +261,14 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             // bind user's address
             validatorRegistry[nextValidatorToBind].withdrawalAddress = withdrawaddr;
             validatorRegistry[nextValidatorToBind].claimAddress = claimaddr;
-            validatorRegistry[nextValidatorToBind].userid = userid;
+            validatorRegistry[nextValidatorToBind].extraData = extradata;
+            validatorRegistry[nextValidatorToBind].amount = DEPOSIT_SIZE;
             nextValidatorToBind++;
         }
     }
 
-
     /** 
+
      * ======================================================================================
      * 
      * INTERNAL FUNCTIONS
