@@ -33,7 +33,11 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
 
     uint256 accountedBalance;   // for tracking of overall deposits
 
-    
+    /**
+     * @dev empty reserved space for future adding of variables
+     */
+    uint256[32] private __gap;
+
     /** 
      * ======================================================================================
      * 

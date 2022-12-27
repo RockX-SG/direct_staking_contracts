@@ -84,7 +84,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev empty reserved space for future adding of variables
      */
-    uint256[31] private __gap;
+    uint256[32] private __gap;
 
     /** 
      * ======================================================================================
