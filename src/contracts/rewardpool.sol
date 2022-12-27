@@ -81,7 +81,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * ======================================================================================
      */
     // to join the reward pool
-    function joinpool(address claimaddr, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function joinpool(address claimaddr, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
         updateReward();
 
         UserInfo storage info = userInfo[claimaddr];
@@ -117,9 +117,8 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * @dev updateReward of tx fee
      */
     function updateReward() public {
-        require(address(this).balance >= accountedBalance);
-        uint256 newReward = address(this).balance - accountedBalance;
-        if (newReward > 0) {
+        if (address(this).balance > accountedBalance) {
+            uint256 newReward = address(this).balance - accountedBalance;
             accShare += newReward * MULTIPLIER / totalStaked;
             accountedBalance = address(this).balance;
         }
@@ -133,8 +132,11 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * ======================================================================================
      */
      function getPendingReward(address claimaddr) external view returns (uint256) {
-        require(address(this).balance >= accountedBalance);
-        uint256 newReward = address(this).balance - accountedBalance;
+        uint256 newReward;
+        if (address(this).balance > accountedBalance) {
+            newReward = address(this).balance - accountedBalance;
+        }
+
         UserInfo storage info = userInfo[claimaddr];
 
         return info.rewardBalance + (accShare + newReward * MULTIPLIER / totalStaked - info.accSharePoint)  * info.amount / MULTIPLIER;
@@ -147,8 +149,5 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * 
      * ======================================================================================
      */
-
-    function _balanceIncrease(uint256 amount) internal { accountedBalance += amount; }
     function _balanceDecrease(uint256 amount) internal { accountedBalance -= amount; }
-
 }
