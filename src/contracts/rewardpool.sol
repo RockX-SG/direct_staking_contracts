@@ -74,6 +74,9 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         __AccessControl_init();
         __ReentrancyGuard_init();
 
+        // init default values
+        managerFeeShare = 200;  // 20%
+
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(CONTROLLER_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
