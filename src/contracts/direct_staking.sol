@@ -295,11 +295,15 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      * @dev user exits his validator
      */
     function exit(uint256 validatorId) external whenNotPaused {
-        require(msg.sender == validatorRegistry[validatorId].withdrawalAddress, "NO_PRIV");
-        require(!validatorRegistry[validatorId].exiting, "EXITING");
+        ValidatorInfo storage info = validatorRegistry[validatorId];
+        require(!info.exiting, "EXITING");
+        require(msg.sender == info.claimAddress, "CLAIM_ADDR_MISMATCH");
 
-        validatorRegistry[validatorId].exiting = true;
+        info.exiting = true;
         exitQueue.push(validatorId);
+
+        // to leave the reward pool
+        IRewardPool(rewardPool).leavepool(info.claimAddress, info.amount);
     }
 
     /** 

@@ -95,6 +95,21 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         totalStaked += amount;
     }
 
+    // to leave a pool
+    function leavepool(address claimaddr, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
+        updateReward();
+
+        UserInfo storage info = userInfo[claimaddr];
+
+        // settle current pending distribution
+        info.rewardBalance += (accShare - info.accSharePoint) * info.amount / MULTIPLIER;
+        info.amount -= amount;
+        info.accSharePoint = accShare;
+
+        // update total staked
+        totalStaked -= amount;
+    }
+
     // claimRewards
     function claimRewards(address beneficiary, uint256 amountRequired) external nonReentrant {
         updateReward();
