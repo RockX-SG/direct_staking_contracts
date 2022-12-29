@@ -17,6 +17,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
     using Address for address payable;
     using Address for address;
 
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
@@ -28,6 +29,9 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         uint256 rewardBalance;  // pending distribution
     }
     
+    uint256 public managerFeeShare; // manager's fee in 1/1000
+    uint256 public managerRevenue; // accounted manager's revenue
+
     uint256 private totalStaked;    // total staked ethers
     uint256 private accShare;   // current earnings per share
     mapping(address => UserInfo) public userInfo; // claimaddr -> info
@@ -73,6 +77,38 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(CONTROLLER_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
+    }
+
+    /** 
+     * ======================================================================================
+     * 
+     * MANAGER FUNCTIONS
+     * 
+     * ======================================================================================
+     */
+    /**
+     * @dev manager withdraw revenue
+     */
+    function withdrawManagerRevenue(uint256 amount, address to) external nonReentrant onlyRole(MANAGER_ROLE)  {
+        require(amount <= managerRevenue, "WITHDRAW_EXCEEDED_MANAGER_REVENUE");
+
+        // track balance change
+        _balanceDecrease(amount);
+        managerRevenue -= amount;
+
+        payable(to).sendValue(amount);
+
+        emit ManagerFeeWithdrawed(amount, to);
+    }
+
+    /**
+     * @dev set manager's fee in 1/1000
+     */
+    function setManagerFeeShare(uint256 milli) external onlyRole(DEFAULT_ADMIN_ROLE)  {
+        require(milli >=0 && milli <=1000, "SHARE_OUT_OF_RANGE");
+        managerFeeShare = milli;
+
+        emit ManagerFeeSet(milli);
     }
 
     /** 
@@ -144,8 +180,13 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      */
     function updateReward() public {
         if (address(this).balance > accountedBalance) {
-            uint256 newReward = address(this).balance - accountedBalance;
-            accShare += newReward * MULTIPLIER / totalStaked;
+            uint256 reward = address(this).balance - accountedBalance;
+
+            // distribute to manager and pool
+            uint256 managerReward = reward * managerFeeShare / 1000;
+            uint256 poolReward = reward - managerReward;
+
+            accShare += poolReward * MULTIPLIER / totalStaked;
             accountedBalance = address(this).balance;
         }
     }
@@ -187,4 +228,6 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
     event PoolJoined(address claimaddr, uint256 amount);
     event PoolLeft(address claimaddr, uint256 amount);
     event Claimed(address beneficiary, uint256 amount);
+    event ManagerFeeWithdrawed(uint256 amount, address to);
+    event ManagerFeeSet(uint256 milli);
 }
