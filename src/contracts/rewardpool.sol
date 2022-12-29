@@ -233,14 +233,14 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      */
     function _balanceDecrease(uint256 amount) internal { accountedBalance -= amount; }
 
-    function _calcPendingReward() internal view returns (uint256 manager, uint256 user)  {
+    function _calcPendingReward() internal view returns (uint256 managerR, uint256 poolR)  {
         uint256 reward = address(this).balance - accountedBalance;
 
         // distribute to manager and pool
-        uint256 managerReward = reward * managerFeeShare / 1000;
-        uint256 poolReward = reward - managerReward;
+        managerR = reward * managerFeeShare / 1000;
+        poolR = reward - managerR;
 
-        return (managerReward, poolReward);
+        return (managerR, poolR);
     }
 
     /**
