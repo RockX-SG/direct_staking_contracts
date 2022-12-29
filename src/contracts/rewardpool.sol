@@ -30,13 +30,13 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
     }
     
     uint256 public managerFeeShare; // manager's fee in 1/1000
-    uint256 public managerRevenue; // accounted manager's revenue
 
-    uint256 private totalStaked;    // total staked ethers
+    uint256 private managerRevenue; // manager's revenue
+    uint256 private totalShare; // total share
     uint256 private accShare;   // current earnings per share
     mapping(address => UserInfo) public userInfo; // claimaddr -> info
 
-    uint256 accountedBalance;   // for tracking of overall deposits
+    uint256 private accountedBalance;   // for tracking of overall deposits
 
     /**
      * @dev empty reserved space for future adding of variables
@@ -80,6 +80,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(CONTROLLER_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
+        _grantRole(MANAGER_ROLE, msg.sender);
     }
 
     /** 
@@ -93,6 +94,8 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * @dev manager withdraw revenue
      */
     function withdrawManagerRevenue(uint256 amount, address to) external nonReentrant onlyRole(MANAGER_ROLE)  {
+        updateReward();
+
         require(amount <= managerRevenue, "WITHDRAW_EXCEEDED_MANAGER_REVENUE");
 
         // track balance change
@@ -133,7 +136,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         info.accSharePoint = accShare;
 
         // update total staked
-        totalStaked += amount;
+        totalShare += amount;
 
         // log
         emit PoolJoined(claimaddr, amount);
@@ -151,7 +154,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         info.accSharePoint = accShare;
 
         // update total staked
-        totalStaked -= amount;
+        totalShare -= amount;
 
         // log
         emit PoolLeft(claimaddr, amount);
@@ -183,13 +186,9 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      */
     function updateReward() public {
         if (address(this).balance > accountedBalance) {
-            uint256 reward = address(this).balance - accountedBalance;
-
-            // distribute to manager and pool
-            uint256 managerReward = reward * managerFeeShare / 1000;
-            uint256 poolReward = reward - managerReward;
-
-            accShare += poolReward * MULTIPLIER / totalStaked;
+            (uint256 managerR, uint256 poolR) = _calcPendingReward();
+            accShare += poolR * MULTIPLIER / totalShare;
+            managerRevenue += managerR;
             accountedBalance = address(this).balance;
         }
     }
@@ -201,15 +200,28 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * 
      * ======================================================================================
      */
+     function getTotalShare() external view returns (uint256) { return totalShare; }
+     function getAccountedBalance() external view returns (uint256) { return accountedBalance; }
+
+
      function getPendingReward(address claimaddr) external view returns (uint256) {
-        uint256 newReward;
+        uint256 poolReward;
         if (address(this).balance > accountedBalance) {
-            newReward = address(this).balance - accountedBalance;
+            (, poolReward) = _calcPendingReward();
         }
 
         UserInfo storage info = userInfo[claimaddr];
 
-        return info.rewardBalance + (accShare + newReward * MULTIPLIER / totalStaked - info.accSharePoint)  * info.amount / MULTIPLIER;
+        return info.rewardBalance + (accShare + poolReward * MULTIPLIER / totalShare - info.accSharePoint)  * info.amount / MULTIPLIER;
+     }
+
+    function getPendingManagerRevenue() external view returns (uint256) {
+        uint256 managerReward;
+        if (address(this).balance > accountedBalance) {
+            (managerReward, ) = _calcPendingReward();
+        }
+
+        return managerRevenue + managerReward;
      }
 
     /** 
@@ -220,6 +232,16 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * ======================================================================================
      */
     function _balanceDecrease(uint256 amount) internal { accountedBalance -= amount; }
+
+    function _calcPendingReward() internal view returns (uint256 manager, uint256 user)  {
+        uint256 reward = address(this).balance - accountedBalance;
+
+        // distribute to manager and pool
+        uint256 managerReward = reward * managerFeeShare / 1000;
+        uint256 poolReward = reward - managerReward;
+
+        return (managerReward, poolReward);
+    }
 
     /**
      * ======================================================================================
