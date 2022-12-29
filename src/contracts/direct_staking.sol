@@ -248,7 +248,15 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev return exit queue
      */
-    function getExitQueue() external view returns (uint256[] memory) { return exitQueue; }
+    function getExitQueue(uint256 from, uint256 to) external view returns (uint256[] memory) { 
+        uint256[] memory ids = new uint256[](to - from);
+        uint256 counter = 0;
+        for (uint i = from; i < to;i++) {
+            ids[counter] = exitQueue[i];
+            counter++;
+        }
+        return ids;
+    }
 
     /**
      * ======================================================================================
