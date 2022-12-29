@@ -18,6 +18,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
     using Address for address;
 
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant CONTROLLER_ROLE = keccak256("CONTROLLER_ROLE");
 
     uint256 private constant MULTIPLIER = 1e18; 
 
@@ -70,6 +71,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         __ReentrancyGuard_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(CONTROLLER_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
     }
 
@@ -81,7 +83,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * ======================================================================================
      */
     // to join the reward pool
-    function joinpool(address claimaddr, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
+    function joinpool(address claimaddr, uint256 amount) external onlyRole(CONTROLLER_ROLE) whenNotPaused {
         updateReward();
 
         UserInfo storage info = userInfo[claimaddr];
@@ -93,10 +95,13 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
 
         // update total staked
         totalStaked += amount;
+
+        // log
+        emit PoolJoined(claimaddr, amount);
     }
 
     // to leave a pool
-    function leavepool(address claimaddr, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) whenNotPaused {
+    function leavepool(address claimaddr, uint256 amount) external onlyRole(CONTROLLER_ROLE) whenNotPaused {
         updateReward();
 
         UserInfo storage info = userInfo[claimaddr];
@@ -108,10 +113,13 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
 
         // update total staked
         totalStaked -= amount;
+
+        // log
+        emit PoolLeft(claimaddr, amount);
     }
 
     // claimRewards
-    function claimRewards(address beneficiary, uint256 amountRequired) external nonReentrant {
+    function claimRewards(address beneficiary, uint256 amount) external nonReentrant whenNotPaused {
         updateReward();
 
         UserInfo storage info = userInfo[msg.sender];
@@ -121,11 +129,14 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         info.accSharePoint = accShare;
 
         // check
-        require(info.rewardBalance >= amountRequired, "INSUFFICIENT_REWARD");
+        require(info.rewardBalance >= amount, "INSUFFICIENT_REWARD");
 
         // account & transfer
-        _balanceDecrease(amountRequired);
-        payable(beneficiary).sendValue(amountRequired);
+        _balanceDecrease(amount);
+        payable(beneficiary).sendValue(amount);
+
+        // log
+        emit Claimed(beneficiary, amount);
     }
 
     /**
@@ -165,4 +176,15 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * ======================================================================================
      */
     function _balanceDecrease(uint256 amount) internal { accountedBalance -= amount; }
+
+    /**
+     * ======================================================================================
+     * 
+     * SYSTEM EVENTS
+     *
+     * ======================================================================================
+     */
+    event PoolJoined(address claimaddr, uint256 amount);
+    event PoolLeft(address claimaddr, uint256 amount);
+    event Claimed(address beneficiary, uint256 amount);
 }

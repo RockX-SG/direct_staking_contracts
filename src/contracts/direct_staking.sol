@@ -289,6 +289,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             validatorRegistry[nextValidatorToBind].amount = DEPOSIT_SIZE;
             nextValidatorToBind++;
         }
+
+        // log
+        emit Staked(msg.sender, msg.value);
     }
 
     /**
@@ -375,4 +378,5 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      */
     event RewardPoolContractSet(address addr);
     event DepositContractSet(address addr);
+    event Staked(address addr, uint256 amount);
 }
