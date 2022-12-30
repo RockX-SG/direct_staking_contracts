@@ -174,6 +174,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         require(info.rewardBalance >= amount, "INSUFFICIENT_REWARD");
 
         // account & transfer
+        info.rewardBalance -= amount;
         _balanceDecrease(amount);
         payable(beneficiary).sendValue(amount);
 
@@ -205,12 +206,15 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
 
 
      function getPendingReward(address claimaddr) external view returns (uint256) {
+        UserInfo storage info = userInfo[claimaddr];
+        if (totalShare == 0) {  
+            return info.rewardBalance;
+        }
+        
         uint256 poolReward;
         if (address(this).balance > accountedBalance) {
             (, poolReward) = _calcPendingReward();
         }
-
-        UserInfo storage info = userInfo[claimaddr];
 
         return info.rewardBalance + (accShare + poolReward * MULTIPLIER / totalShare - info.accSharePoint)  * info.amount / MULTIPLIER;
      }
