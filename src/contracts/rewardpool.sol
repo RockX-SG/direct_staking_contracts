@@ -186,7 +186,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * @dev updateReward of tx fee
      */
     function updateReward() public {
-        if (address(this).balance > accountedBalance) {
+        if (address(this).balance > accountedBalance && totalShare > 0) {
             (uint256 managerR, uint256 poolR) = _calcPendingReward();
             accShare += poolR * MULTIPLIER / totalShare;
             managerRevenue += managerR;
