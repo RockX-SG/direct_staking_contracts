@@ -55,10 +55,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
     // Always extend storage instead of modifying it
     // Variables in implementation v0 
-<<<<<<< HEAD
-=======
-    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
->>>>>>> d8a5a09ab3ea4e688f6aaa7b9cd8e9737c059936
     bytes32 public constant REGISTRY_ROLE = keccak256("REGISTRY_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     uint256 public constant DEPOSIT_SIZE = 32 ether;
@@ -295,11 +291,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev user exits his validator
      */
-<<<<<<< HEAD
     function exit(uint256 validatorId) external {
-=======
-    function exit(uint256 validatorId) external whenNotPaused {
->>>>>>> d8a5a09ab3ea4e688f6aaa7b9cd8e9737c059936
         ValidatorInfo storage info = validatorRegistry[validatorId];
         require(!info.exiting, "EXITING");
         require(msg.sender == info.claimAddress, "CLAIM_ADDR_MISMATCH");
