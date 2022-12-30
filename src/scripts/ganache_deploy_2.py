@@ -62,6 +62,11 @@ def main():
     transparent_ds.setRewardPool(transparent_rewardpool, {'from': owner})
 
     # register 
+    print("getNextValidatorToRegister", transparent_ds.getNextValidatorToRegister())
+    print("getNextValidatorToBind", transparent_ds.getNextValidatorToBind())
+    print("getNextValidatorToDeposit", transparent_ds.getNextValidatorToDeposit())
+    
+
     print("register")
     transparent_ds.registerValidator(0x97d717d346868b9df4851684d5219f4deb4c7388ee1454c9b46837d29b40150ceeb5825d791f993b03745427b6cbe6db, {'from': owner})
 

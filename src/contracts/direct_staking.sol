@@ -77,10 +77,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     // user apply for validator exit
     uint256 [] private exitQueue;
 
-    // below are 3 pointers to track staking procedure
-    // next node id
-    uint256 private nextValidatorToRegister;
-    
+    // below are 2 pointers to track staking procedure
     // next next validator to bind to a user;
     uint256 private nextValidatorToBind;
 
@@ -226,7 +223,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev return next validator ID to register
      */
-    function getNextValidatorToRegister() external view returns (uint256) { return nextValidatorToRegister; }
+    function getNextValidatorToRegister() external view returns (uint256) { return validatorRegistry.length; }
 
     /**
      * @dev return next validator ID to bind to a user
