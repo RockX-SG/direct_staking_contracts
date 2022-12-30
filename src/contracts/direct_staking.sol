@@ -219,7 +219,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     }
 
     /**
-     * @dev return next validator ID to register
+     * @dev return next validator ID to register pubkey
      */
     function getNextValidatorToRegister() external view returns (uint256) { return validatorRegistry.length; }
 
@@ -229,7 +229,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     function getNextValidatorToBind() external view returns (uint256) { return nextValidatorToBind; }
 
     /**
-     * @dev return next validator id
+     * @dev return next validator id to deposit to official contract
      */
     function getNextValidatorToDeposit() external view returns (uint256) { return nextValidatorToDeposit; }
 
