@@ -96,8 +96,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      * 
      * ======================================================================================
      */
-    receive() external payable { }
-
     /**
      * @dev pause the contract
      */
