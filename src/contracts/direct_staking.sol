@@ -55,7 +55,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
     // Always extend storage instead of modifying it
     // Variables in implementation v0 
-    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
     bytes32 public constant REGISTRY_ROLE = keccak256("REGISTRY_ROLE");
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     uint256 public constant DEPOSIT_SIZE = 32 ether;
@@ -127,7 +126,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(REGISTRY_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
-        _grantRole(MANAGER_ROLE, msg.sender);
     }
 
     /**
@@ -171,6 +169,8 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     function batchDeposit(uint256 fromId, bytes [] calldata signatures) external onlyRole(REGISTRY_ROLE) {
         require(fromId == nextValidatorToDeposit, "MISMATCHED_VALIDATOR_ID");
         require(fromId + signatures.length <= nextValidatorToBind, "TOO_MANY_SIGNATURES");
+        require(ethDepositContract != address(0x0), "ETH_DEPOSIT_NULL");
+        require(rewardPool != address(0x0), "REWARDPOOL_NULL");
 
         for (uint256 i = 0;i<signatures.length;i++) {
             ValidatorInfo storage reg = validatorRegistry[fromId + i];
@@ -224,13 +224,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     }
 
     /**
-     * @dev return number of registered validator
-     */
-    function getRegisteredValidatorsCount() external view returns (uint256) {
-        return validatorRegistry.length;
-    }
-    
-    /**
      * @dev return next validator ID to register
      */
     function getNextValidatorToRegister() external view returns (uint256) { return nextValidatorToRegister; }
@@ -279,8 +272,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         uint256 ethersToStake = msg.value - fee;
         require(ethersToStake > 0, "MINT_ZERO");
         require(ethersToStake % DEPOSIT_SIZE == 0, "ROUND_TO_32ETHERS");
-
         uint256 count = ethersToStake / DEPOSIT_SIZE;
+        require(nextValidatorToBind + count <= validatorRegistry.length, "INSUFFICIENT_PUBKEYS");
+
         for (uint256 i = 0;i < count;i++) {
             // bind user's address
             validatorRegistry[nextValidatorToBind].withdrawalAddress = withdrawaddr;
@@ -297,7 +291,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev user exits his validator
      */
-    function exit(uint256 validatorId) external whenNotPaused {
+    function exit(uint256 validatorId) external {
         ValidatorInfo storage info = validatorRegistry[validatorId];
         require(!info.exiting, "EXITING");
         require(msg.sender == info.claimAddress, "CLAIM_ADDR_MISMATCH");

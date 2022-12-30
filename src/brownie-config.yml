@@ -24,4 +24,4 @@ compiler:
           - "solidity-bytes-utils/contracts=GNSPS/solidity-bytes-utils@0.8.0/contracts"
 
 # automatically fetch contract sources from Etherscan
-autofetch_sources: True
+#autofetch_sources: True
