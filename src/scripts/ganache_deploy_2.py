@@ -114,3 +114,5 @@ def main():
     print("transfer 0.1 eth")
     owner.transfer(transparent_rewardpool.address, '0.1 ethers')
     print("getPendingReward:", transparent_rewardpool.getPendingReward(owner))
+    print("getExitQueueLength:", transparent_ds.getExitQueueLength())
+    print("getExitQueue(0,1):", transparent_ds.getExitQueue(0,1))
