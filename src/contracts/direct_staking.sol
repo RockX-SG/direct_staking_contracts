@@ -215,7 +215,8 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         address claimAddress,
         uint256 extraData
      ){
-        return (validatorRegistry[idx].pubkey, validatorRegistry[idx].withdrawalAddress, validatorRegistry[idx].claimAddress, validatorRegistry[idx].extraData);
+        ValidatorInfo storage info = validatorRegistry[idx];  
+        return (info.pubkey, info.withdrawalAddress, info.claimAddress, info.extraData);
     }
 
     /**
