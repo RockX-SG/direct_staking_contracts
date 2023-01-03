@@ -207,7 +207,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      */
 
     /**
-     * @dev return number of registered validator
+     * @dev return registered validator by index
      */
     function getValidatorInfo(uint256 idx) external view returns (
         bytes memory pubkey,
@@ -217,6 +217,32 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      ){
         ValidatorInfo storage info = validatorRegistry[idx];  
         return (info.pubkey, info.withdrawalAddress, info.claimAddress, info.extraData);
+    }
+
+    /**
+     * @dev return registered validator by range
+     */
+    function getValidatorInfos(uint256 from, uint256 to) external view returns (
+        bytes [] memory pubkeys,
+        address [] memory withdrawalAddresses,
+        address [] memory claimAddresses,
+        uint256 [] memory extraDatas
+     ){
+        pubkeys = new bytes[](to - from);
+        withdrawalAddresses = new address[](to - from);
+        claimAddresses =  new address[](to - from);
+        extraDatas = new uint256[](to - from);
+
+        uint256 counter = 0;
+        for (uint i = from; i < to;i++) {
+            ValidatorInfo storage info = validatorRegistry[i];
+            pubkeys[counter] = info.pubkey;
+            withdrawalAddresses[counter] = info.withdrawalAddress;
+            claimAddresses[counter] = info.claimAddress;
+            extraDatas[counter] = info.extraData;
+
+            counter++;
+        }
     }
 
     /**
