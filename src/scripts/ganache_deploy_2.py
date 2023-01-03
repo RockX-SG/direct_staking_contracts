@@ -70,6 +70,9 @@ def main():
     print("register")
     transparent_ds.registerValidator(0x97d717d346868b9df4851684d5219f4deb4c7388ee1454c9b46837d29b40150ceeb5825d791f993b03745427b6cbe6db, {'from': owner})
 
+    print(transparent_ds.getValidatorInfo(0))
+    print(transparent_ds.getValidatorInfos(0,1))
+
     print("getNextValidatorToRegister", transparent_ds.getNextValidatorToRegister())
     print("getNextValidatorToBind", transparent_ds.getNextValidatorToBind())
     print("getNextValidatorToDeposit", transparent_ds.getNextValidatorToDeposit())
@@ -78,6 +81,7 @@ def main():
     print("stake 32 ETH")
     transparent_ds.stake(owner, owner, 1, 0, time.time() + 600, {"from":owner, 'value': '32 ether'})
 
+    print(transparent_ds.getValidatorInfo(0))
     print("getNextValidatorToRegister", transparent_ds.getNextValidatorToRegister())
     print("getNextValidatorToBind", transparent_ds.getNextValidatorToBind())
     print("getNextValidatorToDeposit", transparent_ds.getNextValidatorToDeposit())
@@ -87,6 +91,7 @@ def main():
     print("batch deposit")
     transparent_ds.batchDeposit(0,  [0xa09b4dc28c10063f6e2a9d2ca94b23db029ef618660138898cb827eae227d99ee1c438988d0222ca4229ba85c40add3b045e823fdb7519a36538ff901ab89f311060bcecc517ba683b84009ee3509afbcd25e991ef34112a5a16be44265441eb], {"from":owner})
 
+    print(transparent_ds.getValidatorInfo(0))
     print("getNextValidatorToRegister", transparent_ds.getNextValidatorToRegister())
     print("getNextValidatorToBind", transparent_ds.getNextValidatorToBind())
     print("getNextValidatorToDeposit", transparent_ds.getNextValidatorToDeposit())

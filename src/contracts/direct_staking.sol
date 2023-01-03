@@ -290,6 +290,8 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      */
     function stake(address withdrawaddr, address claimaddr, uint256 extradata, uint256 fee, uint256 deadline) external payable whenNotPaused {
         require(block.timestamp < deadline, "TRANSACTION_EXPIRED");
+        require(withdrawaddr != address(0x0), "ZERO_ADDRESS");
+        require(claimaddr != address(0x0), "ZERO_ADDRESS");
 
         uint256 ethersToStake = msg.value - fee;
         require(ethersToStake > 0, "MINT_ZERO");
