@@ -25,7 +25,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         // binded when user stakes.
         address withdrawalAddress;
         address claimAddress;
-        uint256 amount;
         uint256 extraData; // a 256bit extra data, could be used in DID to ref a user
 
         // mark exiting
@@ -173,7 +172,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             _deposit(reg.pubkey, signatures[i], reg.withdrawalAddress);
 
             // join the reward pool once it's deposited to official
-            IRewardPool(rewardPool).joinpool(reg.claimAddress, reg.amount);
+            IRewardPool(rewardPool).joinpool(reg.claimAddress, DEPOSIT_SIZE);
         }
 
         // move pointer
@@ -304,7 +303,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             validatorRegistry[nextValidatorToBind].withdrawalAddress = withdrawaddr;
             validatorRegistry[nextValidatorToBind].claimAddress = claimaddr;
             validatorRegistry[nextValidatorToBind].extraData = extradata;
-            validatorRegistry[nextValidatorToBind].amount = DEPOSIT_SIZE;
             nextValidatorToBind++;
         }
 
@@ -324,7 +322,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         exitQueue.push(validatorId);
 
         // to leave the reward pool
-        IRewardPool(rewardPool).leavepool(info.claimAddress, info.amount);
+        IRewardPool(rewardPool).leavepool(info.claimAddress, DEPOSIT_SIZE);
     }
 
     /** 
