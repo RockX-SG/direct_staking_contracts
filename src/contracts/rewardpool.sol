@@ -147,6 +147,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         updateReward();
 
         UserInfo storage info = userInfo[claimaddr];
+        require(info.amount >= amount, "INSUFFICIENT_AMOUNT");
 
         // settle current pending distribution
         info.rewardBalance += (accShare - info.accSharePoint) * info.amount / MULTIPLIER;
