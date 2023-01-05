@@ -167,12 +167,12 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         require(rewardPool != address(0x0), "REWARDPOOL_NULL");
 
         for (uint256 i = 0;i<signatures.length;i++) {
-            ValidatorInfo storage reg = validatorRegistry[fromId + i];
             require(signatures[i].length == SIGNATURE_LENGTH, "INCONSISTENT_SIG_LEN");
-            _deposit(reg.pubkey, signatures[i], reg.withdrawalAddress);
+            ValidatorInfo storage info = validatorRegistry[fromId + i];
+            _deposit(info.pubkey, signatures[i], info.withdrawalAddress);
 
             // join the reward pool once it's deposited to official
-            IRewardPool(rewardPool).joinpool(reg.claimAddress, DEPOSIT_SIZE);
+            IRewardPool(rewardPool).joinpool(info.claimAddress, DEPOSIT_SIZE);
         }
 
         // move pointer
