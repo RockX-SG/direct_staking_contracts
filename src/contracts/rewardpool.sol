@@ -24,9 +24,9 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
     uint256 private constant MULTIPLIER = 1e18; 
 
     struct UserInfo {
-        uint256 accSharePoint; // acc share point for last user balance change
-        uint256 amount; // How many tokens the user has provided.
-        uint256 rewardBalance;  // pending distribution
+        uint256 accSharePoint; // share starting point
+        uint256 amount; // user's share
+        uint256 rewardBalance;  // user's pending reward
     }
     
     uint256 public managerFeeShare; // manager's fee in 1/1000
