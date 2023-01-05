@@ -32,8 +32,8 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
     uint256 public managerFeeShare; // manager's fee in 1/1000
 
     uint256 private managerRevenue; // manager's revenue
-    uint256 private totalShare; // total share
-    uint256 private accShare;   // current earnings per share
+    uint256 private totalShares; // total shares
+    uint256 private accShare;   // accumulated earnings per 1 share
     mapping(address => UserInfo) public userInfo; // claimaddr -> info
 
     uint256 private accountedBalance;   // for tracking of overall deposits
@@ -135,8 +135,8 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         info.amount += amount;
         info.accSharePoint = accShare;
 
-        // update total staked
-        totalShare += amount;
+        // update total shares
+        totalShares += amount;
 
         // log
         emit PoolJoined(claimaddr, amount);
@@ -154,8 +154,8 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         info.amount -= amount;
         info.accSharePoint = accShare;
 
-        // update total staked
-        totalShare -= amount;
+        // update total shares
+        totalShares -= amount;
 
         // log
         emit PoolLeft(claimaddr, amount);
@@ -187,9 +187,9 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * @dev updateReward of tx fee
      */
     function updateReward() public {
-        if (address(this).balance > accountedBalance && totalShare > 0) {
+        if (address(this).balance > accountedBalance && totalShares > 0) {
             (uint256 managerR, uint256 poolR) = _calcPendingReward();
-            accShare += poolR * MULTIPLIER / totalShare;
+            accShare += poolR * MULTIPLIER / totalShares;
             managerRevenue += managerR;
             accountedBalance = address(this).balance;
         }
@@ -202,13 +202,13 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * 
      * ======================================================================================
      */
-     function getTotalShare() external view returns (uint256) { return totalShare; }
+     function getTotalShare() external view returns (uint256) { return totalShares; }
      function getAccountedBalance() external view returns (uint256) { return accountedBalance; }
 
 
      function getPendingReward(address claimaddr) external view returns (uint256) {
         UserInfo storage info = userInfo[claimaddr];
-        if (totalShare == 0) {  
+        if (totalShares == 0) {  
             return info.rewardBalance;
         }
         
@@ -217,7 +217,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
             (, poolReward) = _calcPendingReward();
         }
 
-        return info.rewardBalance + (accShare + poolReward * MULTIPLIER / totalShare - info.accSharePoint)  * info.amount / MULTIPLIER;
+        return info.rewardBalance + (accShare + poolReward * MULTIPLIER / totalShares - info.accSharePoint)  * info.amount / MULTIPLIER;
      }
 
     function getPendingManagerRevenue() external view returns (uint256) {
