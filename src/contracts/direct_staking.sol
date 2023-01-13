@@ -241,7 +241,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         // params signature verification
         bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(claimaddr, withdrawaddr, pubkeys, signatures));
         address signer = ECDSA.recover(digest, paramsSig);
-        _require(signer == sysSigner, Strings.toHexString(signer));
+        _require(signer == sysSigner, "UNKNOWN_SIGNER");
 
         // validity check
         _require(withdrawaddr != address(0x0), "ZERO_ADDRESS");
