@@ -237,7 +237,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         address withdrawaddr,
         bytes[] calldata pubkeys,
         bytes[] calldata signatures,
-        bytes calldata paramsSig, uint256 extradata, uint256 fee) external payable whenNotPaused {
+        bytes calldata paramsSig, uint256 extradata, uint256 tips) external payable whenNotPaused {
 
         // global check
         _require(signatures.length <= 10, "RISKY_DEPOSITS");
@@ -255,7 +255,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         _require(withdrawaddr != address(0x0), "ZERO_ADDRESS");
         _require(claimaddr != address(0x0), "ZERO_ADDRESS");
 
-        uint256 ethersToStake = msg.value - fee;
+        uint256 ethersToStake = msg.value - tips;
         _require(ethersToStake % DEPOSIT_SIZE == 0, "ROUND_TO_32ETHERS");
         uint256 nodesAmount = ethersToStake / DEPOSIT_SIZE;
         _require(signatures.length == nodesAmount, "MISMATCHED_ETHERS");
