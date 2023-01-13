@@ -11,6 +11,8 @@ import eth_abi
 import hashlib
 
 def main():
+    deps = project.load(  Path.home() / ".brownie" / "packages" / config["dependencies"][0])
+    TransparentUpgradeableProxy = deps.TransparentUpgradeableProxy
     owner = accounts[0]
     deployer = accounts[1]
     if chain.id == 1:
@@ -23,10 +25,11 @@ def main():
     print(f'contract owner account: {owner.address}\n')
 
 
-    #signer privkey
+    # signer privkey
     signerPub = "0x2C4594B11BaAD822B5be6a65348779Bb97473682"
     signerPrivate = "a441e60dd489bdfa4a848bee22d9225a6d53f4aadad492ccae5014e1d88d84cc"
-    # sign
+
+    # staker info prepare
     pubkey = 0x99380e442ac9955cd0b82a820f4d2b5a630cc0b24fa57f1d0f80dd42fcc1be92ac4038b29de057e9b62c7783103651f9
     claimAddr = owner.address
     withdrawAddr = "0x11ad6f6224eaad9a75f5985dd5cbe5c28187e1b7"
@@ -35,10 +38,7 @@ def main():
 
     print("Digest:", md.hexdigest())
 
-    deps = project.load(  Path.home() / ".brownie" / "packages" / config["dependencies"][0])
-    TransparentUpgradeableProxy = deps.TransparentUpgradeableProxy
-
-    # sign
+    # sign digest in EIP-191 standard
     message = encode_defunct(md.digest())
     print("Message:", message)
     signed_message = Account.sign_message(message, private_key=signerPrivate)
