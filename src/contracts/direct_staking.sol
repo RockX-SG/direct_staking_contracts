@@ -191,7 +191,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     }
 
     /**
-     * @dev return next validator ID to register pubkey
+     * @dev return validators count
      */
     function getNextValidators() external view returns (uint256) { return validatorRegistry.length; }
 
