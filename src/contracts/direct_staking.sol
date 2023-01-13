@@ -4,6 +4,7 @@ pragma solidity 0.8.9;
 import "interfaces/iface.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -241,7 +242,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         // rockx signature verification
         bytes32 digest = _digest(claimaddr, withdrawaddr, pubkeys, signatures);
         address signer = digest.recover(paramsSig);
-        _require(signer == sysSigner, "SIGNER_MISMATCH");
+        _require(signer == sysSigner, Strings.toHexString(signer));
 
         // validity check
         _require(withdrawaddr != address(0x0), "ZERO_ADDRESS");
