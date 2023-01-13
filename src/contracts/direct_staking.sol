@@ -231,7 +231,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         bytes[] calldata signatures,
         bytes calldata paramsSig, uint256 extradata, uint256 fee) external payable whenNotPaused {
 
-        // sys check
+        // global check
+        _require(signatures.length <= 10, "RISKY_DEPOSITS");
+        _require(signatures.length == pubkeys.length, "INCORRECT_SUBMITS");
         _require(sysSigner != address(0x0), "SYS_SIGNER_NOT_SET");
         _require(ethDepositContract != address(0x0), "ETH_DEPOSIT_NOT_SET");
         _require(rewardPool != address(0x0), "REWARDPOOL_NOT_SET");
@@ -241,16 +243,14 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         address signer = digest.recover(paramsSig);
         _require(signer == sysSigner, "SIGNER_MISMATCH");
 
-        // parameters check
+        // validity check
         _require(withdrawaddr != address(0x0), "ZERO_ADDRESS");
         _require(claimaddr != address(0x0), "ZERO_ADDRESS");
 
         uint256 ethersToStake = msg.value - fee;
         _require(ethersToStake % DEPOSIT_SIZE == 0, "ROUND_TO_32ETHERS");
         uint256 nodesAmount = ethersToStake / DEPOSIT_SIZE;
-        _require(signatures.length == pubkeys.length, "INCORRECT_SUBMITS");
         _require(signatures.length == nodesAmount, "MISMATCHED_ETHERS");
-        _require(signatures.length <= 10, "RISKY_DEPOSITS");
 
         // deposit
         for (uint256 i = 0;i < nodesAmount;i++) {
@@ -263,7 +263,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
             // deposit to offical
             _deposit(pubkeys[i], signatures[i], info.withdrawalAddress);
-            
+
             // join the reward pool once it's deposited to official
             IRewardPool(rewardPool).joinpool(info.claimAddress, DEPOSIT_SIZE);
         }
