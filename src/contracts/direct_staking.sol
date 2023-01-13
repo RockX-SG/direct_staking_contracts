@@ -20,9 +20,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
     // structure to record taking info.
     struct ValidatorInfo {
-        bytes pubkey;   // pre-registered public keys
-
-        // binded when user stakes.
+        bytes pubkey;
         address withdrawalAddress;
         address claimAddress;
         uint256 extraData; // a 256bit extra data, could be used in DID to ref a user
@@ -75,13 +73,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
     // user apply for validator exit
     uint256 [] private exitQueue;
-
-    // below are 2 pointers to track staking procedure
-    // next next validator to bind to a user;
-    uint256 private nextValidatorToBind;
-
-    // next validator awaiting to deposit
-    uint256 private nextValidatorToDeposit;
    
     /**
      * @dev empty reserved space for future adding of variables
@@ -120,63 +111,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(REGISTRY_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
-    }
-
-    /**
-     * @dev register a validator
-     */
-    function registerValidator(bytes calldata pubkey) external onlyRole(REGISTRY_ROLE) {
-        require(pubkey.length == PUBKEY_LENGTH, "INCONSISTENT_PUBKEY_LEN");
-
-        ValidatorInfo memory info;
-        info.pubkey = pubkey;
-        validatorRegistry.push(info);
-    }
-
-    /**
-     * @dev replace a validator in case of mistakes
-     */
-    function replaceValidator(uint256 idx, bytes calldata pubkey) external onlyRole(REGISTRY_ROLE) {
-        require(pubkey.length == PUBKEY_LENGTH, "INCONSISTENT_PUBKEY_LEN");
-
-        ValidatorInfo memory info;
-        info.pubkey = pubkey;
-        validatorRegistry[idx] = info;
-    }
-
-    /**
-     * @dev register a batch of validators
-     */
-    function registerValidators(bytes [] calldata pubkeys) external onlyRole(REGISTRY_ROLE) {        
-        uint256 n = pubkeys.length;
-        ValidatorInfo memory info;
-        for(uint256 i=0;i<n;i++) {
-            require(pubkeys[i].length == PUBKEY_LENGTH, "INCONSISTENT_PUBKEY_LEN");
-            info.pubkey = pubkeys[i];
-            validatorRegistry.push(info);
-        }
-    }
-   
-    /**
-     * @dev batch deposit with offline signed signatures 
-     */
-    function batchDeposit(uint256 fromId, bytes [] calldata signatures) external onlyRole(REGISTRY_ROLE) {
-        require(fromId == nextValidatorToDeposit, "MISMATCHED_VALIDATOR_ID");
-        require(fromId + signatures.length <= nextValidatorToBind, "TOO_MANY_SIGNATURES");
-        require(ethDepositContract != address(0x0), "ETH_DEPOSIT_NULL");
-        require(rewardPool != address(0x0), "REWARDPOOL_NULL");
-
-        for (uint256 i = 0;i<signatures.length;i++) {
-            require(signatures[i].length == SIGNATURE_LENGTH, "INCONSISTENT_SIG_LEN");
-            ValidatorInfo storage info = validatorRegistry[fromId + i];
-            _deposit(info.pubkey, signatures[i], info.withdrawalAddress);
-
-            // join the reward pool once it's deposited to official
-            IRewardPool(rewardPool).joinpool(info.claimAddress, DEPOSIT_SIZE);
-        }
-
-        // move pointer
-        nextValidatorToDeposit += signatures.length;
     }
 
     /**
@@ -247,17 +181,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev return next validator ID to register pubkey
      */
-    function getNextValidatorToRegister() external view returns (uint256) { return validatorRegistry.length; }
-
-    /**
-     * @dev return next validator ID to bind to a user
-     */
-    function getNextValidatorToBind() external view returns (uint256) { return nextValidatorToBind; }
-
-    /**
-     * @dev return next validator id to deposit to official contract
-     */
-    function getNextValidatorToDeposit() external view returns (uint256) { return nextValidatorToDeposit; }
+    function getNextValidators() external view returns (uint256) { return validatorRegistry.length; }
 
     /**
      * @dev return exit queue
@@ -287,23 +211,39 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev user stakes
      */
-    function stake(address withdrawaddr, address claimaddr, uint256 extradata, uint256 fee, uint256 deadline) external payable whenNotPaused {
-        require(block.timestamp < deadline, "TRANSACTION_EXPIRED");
-        require(withdrawaddr != address(0x0), "ZERO_ADDRESS");
-        require(claimaddr != address(0x0), "ZERO_ADDRESS");
+    function stake(
+        address claimaddr,
+        address withdrawaddr,
+        bytes[] calldata pubkeys,
+        bytes[] calldata signatures,
+        uint256 extradata, uint256 fee) external payable whenNotPaused {
+            
+        _require(withdrawaddr != address(0x0), "ZERO_ADDRESS");
+        _require(claimaddr != address(0x0), "ZERO_ADDRESS");
 
+        _require(ethDepositContract != address(0x0), "ETH_DEPOSIT_NOT_SET");
+        _require(rewardPool != address(0x0), "REWARDPOOL_NOT_SET");
+
+        // deposit check
         uint256 ethersToStake = msg.value - fee;
-        require(ethersToStake > 0, "MINT_ZERO");
-        require(ethersToStake % DEPOSIT_SIZE == 0, "ROUND_TO_32ETHERS");
+        _require(ethersToStake % DEPOSIT_SIZE == 0, "ROUND_TO_32ETHERS");
         uint256 count = ethersToStake / DEPOSIT_SIZE;
-        require(nextValidatorToBind + count <= validatorRegistry.length, "INSUFFICIENT_PUBKEYS");
+        _require(signatures.length == pubkeys.length, "INCORRECT_SUBMITS");
+        _require(signatures.length == count, "MISMATCHED_ETHERS");
+        _require(signatures.length <= 10, "RISKY_DEPOSITS");
 
         for (uint256 i = 0;i < count;i++) {
-            // bind user's address
-            validatorRegistry[nextValidatorToBind].withdrawalAddress = withdrawaddr;
-            validatorRegistry[nextValidatorToBind].claimAddress = claimaddr;
-            validatorRegistry[nextValidatorToBind].extraData = extradata;
-            nextValidatorToBind++;
+            ValidatorInfo memory info;
+            info.pubkey = pubkeys[i];
+            info.withdrawalAddress = withdrawaddr;
+            info.claimAddress = claimaddr;
+            info.extraData = extradata;
+            validatorRegistry.push(info);
+
+            // deposit to offical
+            _deposit(info.pubkey, signatures[i], info.withdrawalAddress);
+            // join the reward pool once it's deposited to official
+            IRewardPool(rewardPool).joinpool(info.claimAddress, DEPOSIT_SIZE);
         }
 
         // log
@@ -384,6 +324,10 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         ret[7] = bytesValue[0];
     }
 
+    // cheaper version of require
+    function _require(bool condition, string memory text) private pure {
+        require (condition, text);
+    }
     
     /**
      * ======================================================================================
