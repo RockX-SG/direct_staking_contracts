@@ -74,6 +74,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     //  8-10: registered unused pubkeys 
     ValidatorInfo [] private validatorRegistry;
 
+    // user's signature nonces
+    mapping(address=>uint32) private nonces;    
+
     // user apply for validator exit
     uint256 [] private exitQueue;
    
@@ -214,6 +217,11 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     function getExitQueueLength() external view returns (uint256) { return exitQueue.length; }
 
     /**
+     * @dev return account's nonce
+     */
+    function getNonce(address account) external view returns(uint32) { return nonces[account]; }
+
+    /**
      * ======================================================================================
      * 
      * USER EXTERNAL FUNCTIONS
@@ -239,7 +247,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         _require(rewardPool != address(0x0), "REWARDPOOL_NOT_SET");
 
         // params signature verification
-        bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(claimaddr, withdrawaddr, pubkeys, signatures));
+        bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(nonces[msg.sender], claimaddr, withdrawaddr, pubkeys, signatures));
         address signer = ECDSA.recover(digest, paramsSig);
         _require(signer == sysSigner, "UNKNOWN_SIGNER");
 
@@ -268,6 +276,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             IRewardPool(rewardPool).joinpool(info.claimAddress, DEPOSIT_SIZE);
         }
 
+        // update nonce
+        nonces[msg.sender]++;
+    
         // log
         emit Staked(msg.sender, msg.value);
     }
@@ -352,12 +363,14 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     }
 
     // digest params
-    function _digest(address claimaddr,
+    function _digest(
+        uint32 nonce,
+        address claimaddr,
         address withdrawaddr,
         bytes[] calldata pubkeys,
         bytes[] calldata signatures) private pure returns (bytes32) {
 
-        bytes32 digest = sha256(abi.encode(claimaddr, withdrawaddr));
+        bytes32 digest = sha256(abi.encode(nonce, claimaddr, withdrawaddr));
 
         for (uint i=0;i<pubkeys.length;i++) {
             digest = sha256(abi.encode(digest, pubkeys[i], signatures[i]));
