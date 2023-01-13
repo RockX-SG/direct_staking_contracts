@@ -119,6 +119,15 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev set reward pool contract address
      */
+    function setSigner(address _signer) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        sysSigner = _signer;
+
+        emit SignerSet(_signer);
+    }
+
+    /**
+     * @dev set reward pool contract address
+     */
     function setRewardPool(address _rewardPool) external onlyRole(DEFAULT_ADMIN_ROLE) {
         rewardPool = _rewardPool;
 
@@ -222,6 +231,11 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         bytes[] calldata signatures,
         bytes calldata paramsSig, uint256 extradata, uint256 fee) external payable whenNotPaused {
 
+        // sys check
+        _require(sysSigner != address(0x0), "SYS_SIGNER_NOT_SET");
+        _require(ethDepositContract != address(0x0), "ETH_DEPOSIT_NOT_SET");
+        _require(rewardPool != address(0x0), "REWARDPOOL_NOT_SET");
+
         // rockx signature verification
         bytes32 digest = _digest(claimaddr, withdrawaddr, pubkeys, signatures);
         address signer = digest.recover(paramsSig);
@@ -231,10 +245,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         _require(withdrawaddr != address(0x0), "ZERO_ADDRESS");
         _require(claimaddr != address(0x0), "ZERO_ADDRESS");
 
-        _require(ethDepositContract != address(0x0), "ETH_DEPOSIT_NOT_SET");
-        _require(rewardPool != address(0x0), "REWARDPOOL_NOT_SET");
-
-        // deposit check
         uint256 ethersToStake = msg.value - fee;
         _require(ethersToStake % DEPOSIT_SIZE == 0, "ROUND_TO_32ETHERS");
         uint256 nodesAmount = ethersToStake / DEPOSIT_SIZE;
@@ -242,6 +252,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         _require(signatures.length == nodesAmount, "MISMATCHED_ETHERS");
         _require(signatures.length <= 10, "RISKY_DEPOSITS");
 
+        // deposit
         for (uint256 i = 0;i < nodesAmount;i++) {
             ValidatorInfo memory info;
             info.pubkey = pubkeys[i];
@@ -252,6 +263,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
             // deposit to offical
             _deposit(pubkeys[i], signatures[i], info.withdrawalAddress);
+            
             // join the reward pool once it's deposited to official
             IRewardPool(rewardPool).joinpool(info.claimAddress, DEPOSIT_SIZE);
         }
@@ -363,5 +375,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      */
     event RewardPoolContractSet(address addr);
     event DepositContractSet(address addr);
+    event SignerSet(address addr);
     event Staked(address addr, uint256 amount);
 }
