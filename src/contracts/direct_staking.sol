@@ -238,7 +238,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         _require(ethDepositContract != address(0x0), "ETH_DEPOSIT_NOT_SET");
         _require(rewardPool != address(0x0), "REWARDPOOL_NOT_SET");
 
-        // rockx signature verification
+        // params signature verification
         bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(claimaddr, withdrawaddr, pubkeys, signatures));
         address signer = ECDSA.recover(digest, paramsSig);
         _require(signer == sysSigner, Strings.toHexString(signer));
