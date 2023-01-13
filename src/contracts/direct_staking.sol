@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.4;
+pragma solidity 0.8.9;
 
 import "interfaces/iface.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
@@ -357,10 +357,10 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         bytes[] calldata pubkeys,
         bytes[] calldata signatures) private pure returns (bytes32) {
 
-        bytes32 digest = sha256(abi.encodePacked(claimaddr, withdrawaddr));
+        bytes32 digest = sha256(abi.encode(claimaddr, withdrawaddr));
 
         for (uint i=0;i<pubkeys.length;i++) {
-            digest = sha256(abi.encodePacked(digest, pubkeys[i], signatures[i]));
+            digest = sha256(abi.encode(digest, pubkeys[i], signatures[i]));
         }
 
         return digest;
