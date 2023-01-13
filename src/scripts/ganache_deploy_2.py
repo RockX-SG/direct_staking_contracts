@@ -1,8 +1,8 @@
 from brownie import *
 from brownie import convert
 from brownie.convert import EthAddress
-from web3.auto import w3
 from eth_account.messages import encode_defunct
+from eth_account import Account
 from pathlib import Path
 
 import time
@@ -11,21 +11,6 @@ import eth_abi
 import hashlib
 
 def main():
-    #signer privkey
-    signerPub = "0x2C4594B11BaAD822B5be6a65348779Bb97473682"
-    signerPrivate = "a441e60dd489bdfa4a848bee22d9225a6d53f4aadad492ccae5014e1d88d84cc"
-    # sign
-    pubkey = 0x99380e442ac9955cd0b82a820f4d2b5a630cc0b24fa57f1d0f80dd42fcc1be92ac4038b29de057e9b62c7783103651f9
-    claimAddr = "0x11ad6f6224eaad9a75f5985dd5cbe5c28187e1b7"
-    withdrawAddr = "0x11ad6f6224eaad9a75f5985dd5cbe5c28187e1b7"
-    signature = 0xa2f1845644cee06469cea42dbd5ebf4505b9489ed896788ab2b8e42124aceb88a6565a375546254f5507b425d15c90a10e772708dbe9a56b3e46f5c47e8aaf6a9849ae4f838bb9bac068bcde47b616fd2b0824de23ec17981987668a4c50e17d
-    md = digest(claimAddr,withdrawAddr, pubkey, pubkey)
-
-    print("Digest:", md.hexdigest())
-
-    deps = project.load(  Path.home() / ".brownie" / "packages" / config["dependencies"][0])
-    TransparentUpgradeableProxy = deps.TransparentUpgradeableProxy
-
     owner = accounts[0]
     deployer = accounts[1]
     if chain.id == 1:
@@ -37,9 +22,26 @@ def main():
 
     print(f'contract owner account: {owner.address}\n')
 
+
+    #signer privkey
+    signerPub = "0x2C4594B11BaAD822B5be6a65348779Bb97473682"
+    signerPrivate = "a441e60dd489bdfa4a848bee22d9225a6d53f4aadad492ccae5014e1d88d84cc"
     # sign
-    message = encode_defunct(text=md.hexdigest())
-    signed_message = w3.eth.account.sign_message(message, private_key=signerPrivate)
+    pubkey = 0x99380e442ac9955cd0b82a820f4d2b5a630cc0b24fa57f1d0f80dd42fcc1be92ac4038b29de057e9b62c7783103651f9
+    claimAddr = owner.address
+    withdrawAddr = "0x11ad6f6224eaad9a75f5985dd5cbe5c28187e1b7"
+    signature = 0xa2f1845644cee06469cea42dbd5ebf4505b9489ed896788ab2b8e42124aceb88a6565a375546254f5507b425d15c90a10e772708dbe9a56b3e46f5c47e8aaf6a9849ae4f838bb9bac068bcde47b616fd2b0824de23ec17981987668a4c50e17d
+    md = digest(claimAddr, withdrawAddr, pubkey, signature)
+
+    print("Digest:", md.hexdigest())
+
+    deps = project.load(  Path.home() / ".brownie" / "packages" / config["dependencies"][0])
+    TransparentUpgradeableProxy = deps.TransparentUpgradeableProxy
+
+    # sign
+    message = encode_defunct(md.digest())
+    print("Message:", message)
+    signed_message = Account.sign_message(message, private_key=signerPrivate)
     print("Signature:", signed_message)
 
     ### deploy reward pool
@@ -87,13 +89,11 @@ def main():
 
      #stake
     print("stake 32 ETH")
-    transparent_ds.stake(claimAddr, withdrawAddr, [pubkey], [signature], signed_message.signature, 1,0,{"from":owner, 'value': '32 ether'})
-
-    #batch Deposit
-    print("batch deposit")
-
-
-
+    # ecrecover in Solidity expects the signature to be split into v as a uint8,
+    #   and r, s as a bytes32
+    # Remix / web3.js expect r and s to be encoded to hex
+    print(signed_message.signature, bytes(signed_message.signature))
+    transparent_ds.stake(claimAddr, withdrawAddr, [pubkey], [signature], bytes(signed_message.signature), 1,0,{"from":owner, 'value': '32 ether'})
 
     # test
     print("transfer 0.1 eth")
@@ -105,7 +105,7 @@ def main():
     transparent_rewardpool.updateReward({'from':owner})
     print("getPendingReward:", transparent_rewardpool.getPendingReward(owner))
     print("balance before claimReward:", transparent_rewardpool.balance())
-    transparent_rewardpool.claimRewards(owner, 80000000000000000, {'from':owner})
+    transparent_rewardpool.claimRewards(owner, transparent_rewardpool.getPendingReward(owner), {'from':owner})
     print("getPendingReward:", transparent_rewardpool.getPendingReward(owner))
     print("balance after claimReward:", transparent_rewardpool.balance())
     print("getPendingManagerRevenue:", transparent_rewardpool.getPendingManagerRevenue())
@@ -125,7 +125,7 @@ def digest(claimaddr, withdrawaddr, pubkey, signature):
     #print(EthAddress(claimaddr))
     abi = eth_abi.encode_abi(['address', 'address'], [claimaddr, convert.to_address(withdrawaddr)])
     digest = hashlib.sha256(abi)
-    abi = eth_abi.encode_abi(['bytes32', 'bytes', 'bytes'], [convert.to_bytes(digest.hexdigest(), "bytes32"), convert.to_bytes(pubkey,"bytes"), convert.to_bytes(signature,"bytes")])
+    abi = eth_abi.encode_abi(['bytes32', 'bytes', 'bytes'], [convert.to_bytes(digest.hexdigest(),"bytes32"), convert.to_bytes(pubkey,"bytes"), convert.to_bytes(signature,"bytes")])
     digest = hashlib.sha256(abi)
     return digest
 

@@ -19,7 +19,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     using SafeERC20 for IERC20;
     using Address for address payable;
     using Address for address;
-    using ECDSA for bytes32;
 
     // structure to record taking info.
     struct ValidatorInfo {
@@ -240,8 +239,8 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         _require(rewardPool != address(0x0), "REWARDPOOL_NOT_SET");
 
         // rockx signature verification
-        bytes32 digest = _digest(claimaddr, withdrawaddr, pubkeys, signatures);
-        address signer = digest.recover(paramsSig);
+        bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(claimaddr, withdrawaddr, pubkeys, signatures));
+        address signer = ECDSA.recover(digest, paramsSig);
         _require(signer == sysSigner, Strings.toHexString(signer));
 
         // validity check
