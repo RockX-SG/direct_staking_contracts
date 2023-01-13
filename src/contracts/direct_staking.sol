@@ -3,6 +3,7 @@ pragma solidity 0.8.4;
 
 import "interfaces/iface.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
@@ -17,6 +18,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     using SafeERC20 for IERC20;
     using Address for address payable;
     using Address for address;
+    using ECDSA for bytes32;
 
     // structure to record taking info.
     struct ValidatorInfo {
@@ -63,7 +65,8 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     
     address public ethDepositContract;  // ETH 2.0 Deposit contract
     address public rewardPool; // reward pool address
-    
+    address public sysSigner; // signer
+
     // pubkeys pushed by owner
     // [0, 1,2,3,{4,5,6,7}, 8,9, 10], which:
     //  0-3: deposited to official contract,
@@ -208,6 +211,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      * 
      * ======================================================================================
      */
+     
     /**
      * @dev user stakes
      */
@@ -216,8 +220,14 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         address withdrawaddr,
         bytes[] calldata pubkeys,
         bytes[] calldata signatures,
-        uint256 extradata, uint256 fee) external payable whenNotPaused {
-            
+        bytes calldata paramsSig, uint256 extradata, uint256 fee) external payable whenNotPaused {
+
+        // rockx signature verification
+        bytes32 digest = _digest(claimaddr, withdrawaddr, pubkeys, signatures);
+        address signer = digest.recover(paramsSig);
+        _require(signer == sysSigner, "SIGNER_MISMATCH");
+
+        // parameters check
         _require(withdrawaddr != address(0x0), "ZERO_ADDRESS");
         _require(claimaddr != address(0x0), "ZERO_ADDRESS");
 
@@ -227,12 +237,12 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         // deposit check
         uint256 ethersToStake = msg.value - fee;
         _require(ethersToStake % DEPOSIT_SIZE == 0, "ROUND_TO_32ETHERS");
-        uint256 count = ethersToStake / DEPOSIT_SIZE;
+        uint256 nodesAmount = ethersToStake / DEPOSIT_SIZE;
         _require(signatures.length == pubkeys.length, "INCORRECT_SUBMITS");
-        _require(signatures.length == count, "MISMATCHED_ETHERS");
+        _require(signatures.length == nodesAmount, "MISMATCHED_ETHERS");
         _require(signatures.length <= 10, "RISKY_DEPOSITS");
 
-        for (uint256 i = 0;i < count;i++) {
+        for (uint256 i = 0;i < nodesAmount;i++) {
             ValidatorInfo memory info;
             info.pubkey = pubkeys[i];
             info.withdrawalAddress = withdrawaddr;
@@ -241,7 +251,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             validatorRegistry.push(info);
 
             // deposit to offical
-            _deposit(info.pubkey, signatures[i], info.withdrawalAddress);
+            _deposit(pubkeys[i], signatures[i], info.withdrawalAddress);
             // join the reward pool once it's deposited to official
             IRewardPool(rewardPool).joinpool(info.claimAddress, DEPOSIT_SIZE);
         }
@@ -327,6 +337,21 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     // cheaper version of require
     function _require(bool condition, string memory text) private pure {
         require (condition, text);
+    }
+
+    // digest params
+    function _digest(address claimaddr,
+        address withdrawaddr,
+        bytes[] calldata pubkeys,
+        bytes[] calldata signatures) private pure returns (bytes32) {
+
+        bytes32 digest = sha256(abi.encodePacked(claimaddr, withdrawaddr));
+
+        for (uint i=0;i<pubkeys.length;i++) {
+            digest = sha256(abi.encodePacked(digest, pubkeys[i], signatures[i]));
+        }
+
+        return digest;
     }
     
     /**
