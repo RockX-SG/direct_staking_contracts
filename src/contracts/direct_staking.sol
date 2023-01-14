@@ -65,13 +65,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     
     address public ethDepositContract;  // ETH 2.0 Deposit contract
     address public rewardPool; // reward pool address
-    address public sysSigner; // signer
+    address public sysSigner; // the signer for parameters in stake()
 
-    // pubkeys pushed by owner
-    // [0, 1,2,3,{4,5,6,7}, 8,9, 10], which:
-    //  0-3: deposited to official contract,
-    //  4-7: user deposited, awaiting to be signed and then to be deposit to official contract,
-    //  8-10: registered unused pubkeys 
+    // validator registry
     ValidatorInfo [] private validatorRegistry;
 
     // user's signature nonces
@@ -249,12 +245,13 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         // params signature verification
         bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(nonces[msg.sender], claimaddr, withdrawaddr, pubkeys, signatures));
         address signer = ECDSA.recover(digest, paramsSig);
-        _require(signer == sysSigner, "UNKNOWN_SIGNER");
+        _require(signer == sysSigner, "SIGNER_MISMATCH");
 
         // validity check
         _require(withdrawaddr != address(0x0), "ZERO_ADDRESS");
         _require(claimaddr != address(0x0), "ZERO_ADDRESS");
 
+        // may add a minimum tips for each stake 
         uint256 ethersToStake = msg.value - tips;
         _require(ethersToStake % DEPOSIT_SIZE == 0, "ROUND_TO_32ETHERS");
         uint256 nodesAmount = ethersToStake / DEPOSIT_SIZE;
@@ -269,14 +266,14 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             info.extraData = extradata;
             validatorRegistry.push(info);
 
-            // deposit to offical
+            // deposit to offical contract.
             _deposit(pubkeys[i], signatures[i], info.withdrawalAddress);
 
-            // join the reward pool once it's deposited to official
+            // join the reward pool once it's deposited to official one.
             IRewardPool(rewardPool).joinpool(info.claimAddress, DEPOSIT_SIZE);
         }
 
-        // update nonce
+        // update nonce after a successful deposit, in order to avoid attackers to forge parameters signature.
         nonces[msg.sender]++;
     
         // log
