@@ -238,9 +238,10 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         // global check
         _require(signatures.length <= 10, "RISKY_DEPOSITS");
         _require(signatures.length == pubkeys.length, "INCORRECT_SUBMITS");
-        _require(sysSigner != address(0x0), "SYS_SIGNER_NOT_SET");
-        _require(ethDepositContract != address(0x0), "ETH_DEPOSIT_NOT_SET");
-        _require(rewardPool != address(0x0), "REWARDPOOL_NOT_SET");
+        _require(sysSigner != address(0x0) &&
+                ethDepositContract != address(0x0) &&
+                rewardPool != address(0x0), 
+                "NOT_INITIATED");
 
         // params signature verification
         bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(nonces[msg.sender], claimaddr, withdrawaddr, pubkeys, signatures));
@@ -248,8 +249,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         _require(signer == sysSigner, "SIGNER_MISMATCH");
 
         // validity check
-        _require(withdrawaddr != address(0x0), "ZERO_ADDRESS");
-        _require(claimaddr != address(0x0), "ZERO_ADDRESS");
+        _require(withdrawaddr != address(0x0) &&
+                    claimaddr != address(0x0),
+                    "ZERO_ADDRESS");
 
         // may add a minimum tips for each stake 
         uint256 ethersToStake = msg.value - tips;
