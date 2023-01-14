@@ -88,6 +88,14 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      * 
      * ======================================================================================
      */
+    
+    /**
+     * @dev This contract will not accept direct ETH transactions.
+     */
+    receive() external payable {
+        revert("Do not send ETH here");
+    }
+
     /**
      * @dev pause the contract
      */

@@ -89,7 +89,7 @@ def main():
     signed_message = Account.sign_message(message, private_key=signerPrivate)
     print("Signature:", signed_message)
 
-    print("Initate Staking 32 ETH")
+    print("Initiate 32 ETH Staking")
     # ecrecover in Solidity expects the signature to be split into v as a uint8,
     #   and r, s as a bytes32
     # Remix / web3.js expect r and s to be encoded to hex
