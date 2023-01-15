@@ -23,8 +23,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     // structure to record taking info.
     struct ValidatorInfo {
         bytes pubkey;
-        address withdrawalAddress;
-        address claimAddress;
+        address claimAddr;
         uint256 extraData; // a 256bit extra data, could be used in DID to ref a user
 
         // mark exiting
@@ -163,12 +162,11 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      */
     function getValidatorInfo(uint256 idx) external view returns (
         bytes memory pubkey,
-        address withdrawalAddress,
         address claimAddress,
         uint256 extraData
      ){
         ValidatorInfo storage info = validatorRegistry[idx];  
-        return (info.pubkey, info.withdrawalAddress, info.claimAddress, info.extraData);
+        return (info.pubkey, info.claimAddr, info.extraData);
     }
 
     /**
@@ -176,12 +174,10 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      */
     function getValidatorInfos(uint256 from, uint256 to) external view returns (
         bytes [] memory pubkeys,
-        address [] memory withdrawalAddresses,
         address [] memory claimAddresses,
         uint256 [] memory extraDatas
      ){
         pubkeys = new bytes[](to - from);
-        withdrawalAddresses = new address[](to - from);
         claimAddresses =  new address[](to - from);
         extraDatas = new uint256[](to - from);
 
@@ -189,8 +185,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         for (uint i = from; i < to;i++) {
             ValidatorInfo storage info = validatorRegistry[i];
             pubkeys[counter] = info.pubkey;
-            withdrawalAddresses[counter] = info.withdrawalAddress;
-            claimAddresses[counter] = info.claimAddress;
+            claimAddresses[counter] = info.claimAddr;
             extraDatas[counter] = info.extraData;
 
             counter++;
@@ -241,7 +236,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         address withdrawaddr,
         bytes[] calldata pubkeys,
         bytes[] calldata signatures,
-        bytes calldata paramsSig, uint256 extradata, uint256 tips) external payable whenNotPaused {
+        bytes calldata paramsSig, uint256 extradata, uint256 tips) external payable nonReentrant whenNotPaused {
 
         // global check
         _require(signatures.length <= 10, "RISKY_DEPOSITS");
@@ -251,10 +246,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
                 rewardPool != address(0x0), 
                 "NOT_INITIATED");
 
+
         // params signature verification
-        bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(nonces[msg.sender], claimaddr, withdrawaddr, pubkeys, signatures));
-        address signer = ECDSA.recover(digest, paramsSig);
-        _require(signer == sysSigner, "SIGNER_MISMATCH");
+        _require(_verifySigner(claimaddr,withdrawaddr, pubkeys, signatures, paramsSig), "SIGNER_MISMATCH");
 
         // validity check
         _require(withdrawaddr != address(0x0) &&
@@ -271,16 +265,15 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         for (uint256 i = 0;i < nodesAmount;i++) {
             ValidatorInfo memory info;
             info.pubkey = pubkeys[i];
-            info.withdrawalAddress = withdrawaddr;
-            info.claimAddress = claimaddr;
+            info.claimAddr = claimaddr;
             info.extraData = extradata;
             validatorRegistry.push(info);
 
             // deposit to offical contract.
-            _deposit(pubkeys[i], signatures[i], info.withdrawalAddress);
+            _deposit(pubkeys[i], signatures[i], withdrawaddr);
 
             // join the reward pool once it's deposited to official one.
-            IRewardPool(rewardPool).joinpool(info.claimAddress, DEPOSIT_SIZE);
+            IRewardPool(rewardPool).joinpool(info.claimAddr, DEPOSIT_SIZE);
         }
 
         // update nonce after a successful deposit, in order to avoid attackers to forge parameters signature.
@@ -296,13 +289,13 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     function exit(uint256 validatorId) external {
         ValidatorInfo storage info = validatorRegistry[validatorId];
         require(!info.exiting, "EXITING");
-        require(msg.sender == info.claimAddress, "CLAIM_ADDR_MISMATCH");
+        require(msg.sender == info.claimAddr, "CLAIM_ADDR_MISMATCH");
 
         info.exiting = true;
         exitQueue.push(validatorId);
 
         // to leave the reward pool
-        IRewardPool(rewardPool).leavepool(info.claimAddress, DEPOSIT_SIZE);
+        IRewardPool(rewardPool).leavepool(info.claimAddr, DEPOSIT_SIZE);
     }
 
     /** 
@@ -367,6 +360,20 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     // cheaper version of require
     function _require(bool condition, string memory text) private pure {
         require (condition, text);
+    }
+
+    // verify signer of the paramseters
+    function _verifySigner(address claimaddr,
+        address withdrawaddr,
+        bytes[] calldata pubkeys,
+        bytes[] calldata signatures,
+        bytes calldata paramsSig) internal view returns(bool) {
+
+        // params signature verification
+        bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(nonces[msg.sender], claimaddr, withdrawaddr, pubkeys, signatures));
+        address signer = ECDSA.recover(digest, paramsSig);
+
+        return (signer == sysSigner);
     }
 
     // digest params
