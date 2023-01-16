@@ -29,6 +29,15 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         // mark exiting
         bool exiting;
     }
+    // Variables in implementation v0 
+    bytes32 public constant REGISTRY_ROLE = keccak256("REGISTRY_ROLE");
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    uint256 public constant DEPOSIT_SIZE = 32 ether;
+
+    uint256 private constant MULTIPLIER = 1e18; 
+    uint256 private constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
+    uint256 private constant SIGNATURE_LENGTH = 96;
+    uint256 private constant PUBKEY_LENGTH = 48;
 
     /**
         Incorrect storage preservation:
@@ -52,16 +61,8 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     */
 
     // Always extend storage instead of modifying it
-    // Variables in implementation v0 
-    bytes32 public constant REGISTRY_ROLE = keccak256("REGISTRY_ROLE");
-    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
-    uint256 public constant DEPOSIT_SIZE = 32 ether;
+    bytes private DEPOSIT_AMOUNT_LITTLE_ENDIAN;
 
-    uint256 private constant MULTIPLIER = 1e18; 
-    uint256 private constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
-    uint256 private constant SIGNATURE_LENGTH = 96;
-    uint256 private constant PUBKEY_LENGTH = 48;
-    
     address public ethDepositContract;  // ETH 2.0 Deposit contract
     address public rewardPool; // reward pool address
     address public sysSigner; // the signer for parameters in stake()
@@ -120,6 +121,10 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(REGISTRY_ROLE, msg.sender);
         _grantRole(PAUSER_ROLE, msg.sender);
+
+        // little endian deposit amount
+        uint256 depositAmount = DEPOSIT_SIZE / DEPOSIT_AMOUNT_UNIT;
+        DEPOSIT_AMOUNT_LITTLE_ENDIAN = to_little_endian_64(uint64(depositAmount));
     }
 
     /**
@@ -324,12 +329,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             sha256(abi.encodePacked(BytesLib.slice(signature, 64, SIGNATURE_LENGTH - 64), bytes32(0)))
         ));
         
-        uint256 depositAmount = DEPOSIT_SIZE / DEPOSIT_AMOUNT_UNIT;
-        bytes memory amount = to_little_endian_64(uint64(depositAmount));
-
         bytes32 depositDataRoot = sha256(abi.encodePacked(
             sha256(abi.encodePacked(pubkey_root, withdrawal_credential)),
-            sha256(abi.encodePacked(amount, bytes24(0), signature_root))
+            sha256(abi.encodePacked(DEPOSIT_AMOUNT_LITTLE_ENDIAN, bytes24(0), signature_root))
         ));
 
         IDepositContract(ethDepositContract).deposit{value:DEPOSIT_SIZE} (
