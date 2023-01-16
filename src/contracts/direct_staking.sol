@@ -111,7 +111,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     }
 
     /**
-     * @dev initialization address
+     * @dev initialization
      */
     function initialize() initializer public {
         __Pausable_init();
@@ -128,7 +128,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     }
 
     /**
-     * @dev set reward pool contract address
+     * @dev set signer adress
      */
     function setSigner(address _signer) external onlyRole(DEFAULT_ADMIN_ROLE) {
         sysSigner = _signer;
@@ -267,7 +267,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         _require(signatures.length == nodesAmount, "MISMATCHED_ETHERS");
 
         // build withdrawal credential from withdraw address
-        // uint8('0x1') + 11 bytes(0) + this.address
+        // uint8('0x1') + 11 bytes(0) + withdraw address
         bytes memory cred = abi.encodePacked(bytes1(0x01), new bytes(11), withdrawaddr);
         bytes32 withdrawal_credential = BytesLib.toBytes32(cred, 0);
 
