@@ -111,6 +111,13 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     }
 
     /**
+     * @dev disable implementation init
+     */
+    constructor() {
+        _disableInitializers();
+    }
+    
+    /**
      * @dev initialization
      */
     function initialize() initializer public {

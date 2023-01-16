@@ -65,7 +65,13 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
     function unpause() public onlyRole(PAUSER_ROLE) {
         _unpause();
     }
-
+    /**
+     * @dev disable implementation init
+     */
+    constructor() {
+        _disableInitializers();
+    }
+    
     /**
      * @dev initialization address
      */
