@@ -12,7 +12,7 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 /**
  * @title Reward Pool
  */
-contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradeable, ReentrancyGuardUpgradeable {
+contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradeable, ReentrancyGuardUpgradeable, IRewardPool {
     using SafeERC20 for IERC20;
     using Address for address payable;
     using Address for address;
@@ -125,7 +125,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
      * ======================================================================================
      */
     // to join the reward pool
-    function joinpool(address claimaddr, uint256 amount) external onlyRole(CONTROLLER_ROLE) whenNotPaused {
+    function joinpool(address claimaddr, uint256 amount) override external onlyRole(CONTROLLER_ROLE) whenNotPaused {
         updateReward();
 
         UserInfo storage info = userInfo[claimaddr];
@@ -143,7 +143,7 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
     }
 
     // to leave a pool
-    function leavepool(address claimaddr, uint256 amount) external onlyRole(CONTROLLER_ROLE) whenNotPaused {
+    function leavepool(address claimaddr, uint256 amount) override external onlyRole(CONTROLLER_ROLE) whenNotPaused {
         updateReward();
 
         UserInfo storage info = userInfo[claimaddr];
