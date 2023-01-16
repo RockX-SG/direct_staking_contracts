@@ -262,7 +262,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
         // may add a minimum tips for each stake 
         uint256 ethersToStake = msg.value - tips;
-        _require(ethersToStake % DEPOSIT_SIZE == 0, "ROUND_TO_32ETHERS");
+        _require(ethersToStake % DEPOSIT_SIZE == 0, "ETHERS_NOT_ALIGNED");
         uint256 nodesAmount = ethersToStake / DEPOSIT_SIZE;
         _require(signatures.length == nodesAmount, "MISMATCHED_ETHERS");
 
