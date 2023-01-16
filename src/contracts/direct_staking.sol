@@ -357,7 +357,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     }
 
     /**
-     * @dev cheaper version of require
+     * @dev code size will be smaller
      */
     function _require(bool condition, string memory text) private pure {
         require (condition, text);
