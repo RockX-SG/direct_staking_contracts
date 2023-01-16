@@ -388,9 +388,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         address claimaddr,
         address withdrawaddr,
         bytes[] calldata pubkeys,
-        bytes[] calldata signatures) private pure returns (bytes32) {
+        bytes[] calldata signatures) private view returns (bytes32) {
 
-        bytes32 digest = sha256(abi.encode(nonce, claimaddr, withdrawaddr));
+        bytes32 digest = sha256(abi.encode(nonce, address(this), claimaddr, withdrawaddr));
 
         for (uint i=0;i<pubkeys.length;i++) {
             digest = sha256(abi.encode(digest, pubkeys[i], signatures[i]));

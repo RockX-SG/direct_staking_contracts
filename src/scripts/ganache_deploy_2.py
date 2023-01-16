@@ -79,7 +79,7 @@ def main():
     claimAddr = owner.address
     withdrawAddr = "0x11ad6f6224eaad9a75f5985dd5cbe5c28187e1b7"
     signature = 0xa2f1845644cee06469cea42dbd5ebf4505b9489ed896788ab2b8e42124aceb88a6565a375546254f5507b425d15c90a10e772708dbe9a56b3e46f5c47e8aaf6a9849ae4f838bb9bac068bcde47b616fd2b0824de23ec17981987668a4c50e17d
-    md = digest(transparent_ds.getNonce(owner), claimAddr, withdrawAddr, pubkey, signature)
+    md = digest(transparent_ds.getNonce(owner), transparent_ds.address, claimAddr, withdrawAddr, pubkey, signature)
 
     print("Digest:", md.hexdigest())
 
@@ -122,9 +122,9 @@ def main():
     print("getExitQueueLength:", transparent_ds.getExitQueueLength())
     print("getExitQueue(0,1):", transparent_ds.getExitQueue(0,1))
 
-def digest(nonce, claimaddr, withdrawaddr, pubkey, signature):
+def digest(nonce, contractAddr, claimaddr, withdrawaddr, pubkey, signature):
     #print(EthAddress(claimaddr))
-    abi = eth_abi.encode_abi(['uint32','address', 'address'], [nonce, claimaddr, convert.to_address(withdrawaddr)])
+    abi = eth_abi.encode_abi(['uint32','address', 'address', 'address'], [nonce, contractAddr, claimaddr, convert.to_address(withdrawaddr)])
     digest = hashlib.sha256(abi)
     abi = eth_abi.encode_abi(['bytes32', 'bytes', 'bytes'], [convert.to_bytes(digest.hexdigest(),"bytes32"), convert.to_bytes(pubkey,"bytes"), convert.to_bytes(signature,"bytes")])
     digest = hashlib.sha256(abi)
