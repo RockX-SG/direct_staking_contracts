@@ -76,10 +76,12 @@ def main():
     # staker info prepare
     print("Preparing signature for staking....")
     pubkey = 0x99380e442ac9955cd0b82a820f4d2b5a630cc0b24fa57f1d0f80dd42fcc1be92ac4038b29de057e9b62c7783103651f9
+    pubkey2 = 0xae73a54c8206f664523e4a45f802c6b3b8f7bdb9a8c64f2af53bf7c4425e350c68cd906ec822e1ec84e8e3d626f958f3
     claimAddr = owner.address
     withdrawAddr = "0x11ad6f6224eaad9a75f5985dd5cbe5c28187e1b7"
     signature = 0xa2f1845644cee06469cea42dbd5ebf4505b9489ed896788ab2b8e42124aceb88a6565a375546254f5507b425d15c90a10e772708dbe9a56b3e46f5c47e8aaf6a9849ae4f838bb9bac068bcde47b616fd2b0824de23ec17981987668a4c50e17d
-    md = digest(transparent_ds.getNonce(owner), transparent_ds.address, claimAddr, withdrawAddr, pubkey, signature)
+    signature2 = 0xb337f858d1938704cdb2e5bf5dfb82723f7f5a08b6ce66200d24efa3973132dd3e701111cccf940c5965e80b5068af830be5e9d1ca1aa06e57ddd7b3948501f16e79c48e039738836ca4e5f3442b5e5c52eff472b4526a973649d0dad73698d5
+    md = digest(transparent_ds.getNonce(owner), transparent_ds.address, claimAddr, withdrawAddr, [pubkey, pubkey2], [signature, signature2])
 
     print("Digest:", md.hexdigest())
 
@@ -89,12 +91,12 @@ def main():
     signed_message = Account.sign_message(message, private_key=signerPrivate)
     print("Signature:", signed_message)
 
-    print("Initiate 32 ETH Staking")
+    print("Initiate 64 ETH Staking")
     # ecrecover in Solidity expects the signature to be split into v as a uint8,
     #   and r, s as a bytes32
     # Remix / web3.js expect r and s to be encoded to hex
     print(signed_message.signature, bytes(signed_message.signature))
-    transparent_ds.stake(claimAddr, withdrawAddr, [pubkey], [signature], bytes(signed_message.signature), 1,0,{"from":owner, 'value': '32 ether'})
+    transparent_ds.stake(claimAddr, withdrawAddr, [pubkey, pubkey2], [signature,signature2], bytes(signed_message.signature), 1,'0.1 ether',{"from":owner, 'value': '64.1 ether'})
 
     # test
     print("Transfer 0.1 eth as pool revenue")
@@ -122,11 +124,16 @@ def main():
     print("getExitQueueLength:", transparent_ds.getExitQueueLength())
     print("getExitQueue(0,1):", transparent_ds.getExitQueue(0,1))
 
-def digest(nonce, contractAddr, claimaddr, withdrawaddr, pubkey, signature):
+def digest(nonce, contractAddr, claimaddr, withdrawaddr, pubkeys, signatures):
     #print(EthAddress(claimaddr))
     abi = eth_abi.encode_abi(['uint32','address', 'address', 'address'], [nonce, contractAddr, claimaddr, convert.to_address(withdrawaddr)])
     digest = hashlib.sha256(abi)
-    abi = eth_abi.encode_abi(['bytes32', 'bytes', 'bytes'], [convert.to_bytes(digest.hexdigest(),"bytes32"), convert.to_bytes(pubkey,"bytes"), convert.to_bytes(signature,"bytes")])
-    digest = hashlib.sha256(abi)
+
+    for i in range(len(pubkeys)):
+        pubkey = pubkeys[i]
+        signature = signatures[i]
+        abi = eth_abi.encode_abi(['bytes32', 'bytes', 'bytes'], [convert.to_bytes(digest.hexdigest(),"bytes32"), convert.to_bytes(pubkey,"bytes"), convert.to_bytes(signature,"bytes")])
+        digest = hashlib.sha256(abi)
+
     return digest
 
