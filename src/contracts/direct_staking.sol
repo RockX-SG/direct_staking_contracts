@@ -357,12 +357,16 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         ret[7] = bytesValue[0];
     }
 
-    // cheaper version of require
+    /**
+     * @dev cheaper version of require
+     */
     function _require(bool condition, string memory text) private pure {
         require (condition, text);
     }
 
-    // verify signer of the paramseters
+    /**
+     * @dev verify signer of the paramseters
+     */
     function _verifySigner(address claimaddr,
         address withdrawaddr,
         bytes[] calldata pubkeys,
@@ -376,7 +380,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         return (signer == sysSigner);
     }
 
-    // digest params
+    /**
+     * @dev digest params
+     */
     function _digest(
         uint32 nonce,
         address claimaddr,
