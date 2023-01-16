@@ -261,6 +261,11 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         uint256 nodesAmount = ethersToStake / DEPOSIT_SIZE;
         _require(signatures.length == nodesAmount, "MISMATCHED_ETHERS");
 
+        // build withdrawal credential from withdraw address
+        // uint8('0x1') + 11 bytes(0) + this.address
+        bytes memory cred = abi.encodePacked(bytes1(0x01), new bytes(11), withdrawaddr);
+        bytes32 withdrawal_credential = BytesLib.toBytes32(cred, 0);
+
         // deposit
         for (uint256 i = 0;i < nodesAmount;i++) {
             ValidatorInfo memory info;
@@ -270,7 +275,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             validatorRegistry.push(info);
 
             // deposit to offical contract.
-            _deposit(pubkeys[i], signatures[i], withdrawaddr);
+            _deposit(pubkeys[i], signatures[i], withdrawal_credential);
 
             // join the reward pool once it's deposited to official one.
             IRewardPool(rewardPool).joinpool(info.claimAddr, DEPOSIT_SIZE);
@@ -310,16 +315,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev Invokes a deposit call to the official Deposit contract
      */
-    function _deposit(bytes memory pubkey, bytes memory signature, address withdrawal_address) internal {
-        uint256 value = DEPOSIT_SIZE;
-        uint256 depositAmount = DEPOSIT_SIZE / DEPOSIT_AMOUNT_UNIT;
-        assert(depositAmount * DEPOSIT_AMOUNT_UNIT == value);    // properly rounded
-
-        // initiate withdrawal credential 
-        // uint8('0x1') + 11 bytes(0) + this.address
-        bytes memory cred = abi.encodePacked(bytes1(0x01), new bytes(11), withdrawal_address);
-        bytes32 withdrawal_credential = BytesLib.toBytes32(cred, 0);
-
+    function _deposit(bytes calldata pubkey, bytes calldata signature, bytes32 withdrawal_credential) internal {
         // Compute deposit data root (`DepositData` hash tree root)
         // https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa#code
         bytes32 pubkey_root = sha256(abi.encodePacked(pubkey, bytes16(0)));
@@ -328,6 +324,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             sha256(abi.encodePacked(BytesLib.slice(signature, 64, SIGNATURE_LENGTH - 64), bytes32(0)))
         ));
         
+        uint256 depositAmount = DEPOSIT_SIZE / DEPOSIT_AMOUNT_UNIT;
         bytes memory amount = to_little_endian_64(uint64(depositAmount));
 
         bytes32 depositDataRoot = sha256(abi.encodePacked(
