@@ -162,6 +162,25 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     }
 
     /**
+     * @dev verify signer of the paramseters
+     */
+    function verifySigner(
+        address account,
+        address claimaddr,
+        address withdrawaddr,
+        bytes[] calldata pubkeys,
+        bytes[] calldata signatures,
+        bytes calldata paramsSig) public view returns(bool) {
+
+        // params signature verification
+        bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(nonces[account], claimaddr, withdrawaddr, pubkeys, signatures));
+        address signer = ECDSA.recover(digest, paramsSig);
+
+        return (signer == sysSigner);
+    }
+
+
+    /**
      * ======================================================================================
      * 
      * VIEW FUNCTIONS
@@ -260,7 +279,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
 
         // params signature verification
-        _require(_verifySigner(claimaddr,withdrawaddr, pubkeys, signatures, paramsSig), "SIGNER_MISMATCH");
+        _require(verifySigner(msg.sender, claimaddr,withdrawaddr, pubkeys, signatures, paramsSig), "SIGNER_MISMATCH");
 
         // validity check
         _require(withdrawaddr != address(0x0) &&
@@ -370,21 +389,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         require (condition, text);
     }
 
-    /**
-     * @dev verify signer of the paramseters
-     */
-    function _verifySigner(address claimaddr,
-        address withdrawaddr,
-        bytes[] calldata pubkeys,
-        bytes[] calldata signatures,
-        bytes calldata paramsSig) internal view returns(bool) {
-
-        // params signature verification
-        bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(nonces[msg.sender], claimaddr, withdrawaddr, pubkeys, signatures));
-        address signer = ECDSA.recover(digest, paramsSig);
-
-        return (signer == sysSigner);
-    }
 
     /**
      * @dev digest params
