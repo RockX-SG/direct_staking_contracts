@@ -179,7 +179,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         return (signer == sysSigner);
     }
 
-
     /**
      * ======================================================================================
      * 
@@ -388,7 +387,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     function _require(bool condition, string memory text) private pure {
         require (condition, text);
     }
-
 
     /**
      * @dev digest params
