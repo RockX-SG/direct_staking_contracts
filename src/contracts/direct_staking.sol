@@ -77,7 +77,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     uint256 [] private exitQueue;
 
     // shanghai merge
-    bool shanghai;
+    bool private shanghai;
    
     /**
      * @dev empty reserved space for future adding of variables
