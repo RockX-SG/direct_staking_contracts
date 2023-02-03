@@ -115,6 +115,9 @@ def main():
     print("withdrawManagerRevenue:",transparent_rewardpool.withdrawManagerRevenue(20000000000000000,owner, {'from':owner}))
     print("getPendingManagerRevenue:", transparent_rewardpool.getPendingManagerRevenue())
     print("getAccountedBalance:", transparent_rewardpool.getAccountedBalance())
+
+    print("toggle shanghai switch")
+    transparent_ds.toggleShangHai({'from': owner})
     print("exit")
     transparent_ds.exit(0, {"from":owner})
     print("getPendingReward:", transparent_rewardpool.getPendingReward(owner))

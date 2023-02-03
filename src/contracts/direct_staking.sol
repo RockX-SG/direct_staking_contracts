@@ -75,6 +75,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
     // user apply for validator exit
     uint256 [] private exitQueue;
+
+    // shanghai merge
+    bool shanghai;
    
     /**
      * @dev empty reserved space for future adding of variables
@@ -108,6 +111,14 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      */
     function unpause() public onlyRole(PAUSER_ROLE) {
         _unpause();
+    }
+
+    /**
+     * @dev enable exit after shanghai merge.
+     */
+    modifier onlyShanghai() {
+        require(shanghai, "AVAILABLE_AFTER_SHANGHAI_MERGE");
+        _;
     }
 
     /**
@@ -159,6 +170,15 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         ethDepositContract = _ethDepositContract;
 
         emit DepositContractSet(_ethDepositContract);
+    }
+
+    /**
+     * @dev toggle shanghai merge
+     */
+    function toggleShangHai() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        shanghai = !shanghai;
+
+        emit ShangHaiStatus(shanghai);
     }
 
     /**
@@ -321,7 +341,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     /**
      * @dev user exits his validator
      */
-    function exit(uint256 validatorId) external {
+    function exit(uint256 validatorId) external onlyShanghai {
         ValidatorInfo storage info = validatorRegistry[validatorId];
         require(!info.exiting, "EXITING");
         require(msg.sender == info.claimAddr, "CLAIM_ADDR_MISMATCH");
@@ -418,4 +438,5 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     event DepositContractSet(address addr);
     event SignerSet(address addr);
     event Staked(address addr, uint256 amount);
+    event ShangHaiStatus(bool status);
 }
