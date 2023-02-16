@@ -33,12 +33,13 @@ def main():
 
         ### deploy reward pool
     rewardpool_contract = RewardPool.deploy(
-            {'from': deployer}
+            {'from': deployer}, publish_source=True
             )
 
     rewardpool_proxy = TransparentUpgradeableProxy.deploy(
             rewardpool_contract, deployer, b'',
-            {'from': deployer}
+            {'from': deployer}, publish_source=True
+
             )
 
     transparent_rewardpool= Contract.from_abi("RewardPool", rewardpool_proxy.address, RewardPool.abi)
@@ -46,12 +47,14 @@ def main():
 
     ### deploy staking contract
     direct_staking_contract = DirectStaking.deploy(
-            {'from': deployer}
+            {'from': deployer}, publish_source=True
+
             )
 
     direct_staking_contract_proxy = TransparentUpgradeableProxy.deploy(
             direct_staking_contract, deployer, b'',
-            {'from': deployer}
+            {'from': deployer}, publish_source=True
+
             )
 
     transparent_ds = Contract.from_abi("DirectStaking", direct_staking_contract_proxy.address, DirectStaking.abi)
