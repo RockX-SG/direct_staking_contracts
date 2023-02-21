@@ -69,9 +69,10 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
     // validator registry
     ValidatorInfo [] private validatorRegistry;
+    
 
-    // user's signature nonces
-    mapping(address=>uint32) private nonces;    
+    // users's signed params to avert doubled staking
+    mapping(bytes32=>bool) private signedParams;    
 
     // user apply for validator exit
     uint256 [] private exitQueue;
@@ -185,7 +186,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      * @dev verify signer of the paramseters
      */
     function verifySigner(
-        address account,
         address claimaddr,
         address withdrawaddr,
         bytes[] calldata pubkeys,
@@ -193,7 +193,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         bytes calldata paramsSig) public view returns(bool) {
 
         // params signature verification
-        bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(nonces[account], claimaddr, withdrawaddr, pubkeys, signatures));
+        bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(0, claimaddr, withdrawaddr, pubkeys, signatures));
         address signer = ECDSA.recover(digest, paramsSig);
 
         return (signer == sysSigner);
@@ -266,11 +266,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     function getExitQueueLength() external view returns (uint256) { return exitQueue.length; }
 
     /**
-     * @dev return account's nonce
-     */
-    function getNonce(address account) external view returns(uint32) { return nonces[account]; }
-
-    /**
      * ======================================================================================
      * 
      * USER EXTERNAL FUNCTIONS
@@ -298,7 +293,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
 
         // params signature verification
-        _require(verifySigner(msg.sender, claimaddr,withdrawaddr, pubkeys, signatures, paramsSig), "SIGNER_MISMATCH");
+        _require(verifySigner(claimaddr, withdrawaddr, pubkeys, signatures, paramsSig), "SIGNER_MISMATCH");
 
         // validity check
         _require(withdrawaddr != address(0x0) &&
@@ -331,8 +326,8 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             IRewardPool(rewardPool).joinpool(info.claimAddr, DEPOSIT_SIZE);
         }
 
-        // update nonce after a successful deposit, in order to avoid attackers to forge parameters signature.
-        nonces[msg.sender]++;
+        // update signedParams to avert repeated use of signature
+        signedParams[keccak256(paramsSig)] = true;
     
         // log
         emit Staked(msg.sender, msg.value);

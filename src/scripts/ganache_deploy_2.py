@@ -81,7 +81,7 @@ def main():
     withdrawAddr = "0x11ad6f6224eaad9a75f5985dd5cbe5c28187e1b7"
     signature = 0xa2f1845644cee06469cea42dbd5ebf4505b9489ed896788ab2b8e42124aceb88a6565a375546254f5507b425d15c90a10e772708dbe9a56b3e46f5c47e8aaf6a9849ae4f838bb9bac068bcde47b616fd2b0824de23ec17981987668a4c50e17d
     signature2 = 0xb337f858d1938704cdb2e5bf5dfb82723f7f5a08b6ce66200d24efa3973132dd3e701111cccf940c5965e80b5068af830be5e9d1ca1aa06e57ddd7b3948501f16e79c48e039738836ca4e5f3442b5e5c52eff472b4526a973649d0dad73698d5
-    md = digest(transparent_ds.getNonce(owner), transparent_ds.address, claimAddr, withdrawAddr, [pubkey, pubkey2], [signature, signature2])
+    md = digest(0, transparent_ds.address, claimAddr, withdrawAddr, [pubkey, pubkey2], [signature, signature2])
 
     print("Digest:", md.hexdigest())
 
