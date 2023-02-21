@@ -69,7 +69,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
     // validator registry
     ValidatorInfo [] private validatorRegistry;
-    
 
     // users's signed params to avert doubled staking
     mapping(bytes32=>bool) private signedParams;    
@@ -284,6 +283,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         bytes calldata paramsSig, uint256 extradata, uint256 tips) external payable nonReentrant whenNotPaused {
 
         // global check
+        _require(!signedParams[keccak256(paramsSig)], "REPLAYED_PARAMS");
         _require(signatures.length <= 10, "RISKY_DEPOSITS");
         _require(signatures.length == pubkeys.length, "INCORRECT_SUBMITS");
         _require(sysSigner != address(0x0) &&
