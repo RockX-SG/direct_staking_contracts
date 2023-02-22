@@ -96,7 +96,7 @@ def main():
     #   and r, s as a bytes32
     # Remix / web3.js expect r and s to be encoded to hex
     print(signed_message.signature, bytes(signed_message.signature))
-    transparent_ds.stake(claimAddr, withdrawAddr, [pubkey, pubkey2], [signature,signature2], bytes(signed_message.signature), 1,'0.1 ether',{"from":owner, 'value': '64.1 ether'})
+    transparent_ds.stake(claimAddr, withdrawAddr, [pubkey, pubkey2], [signature,signature2], bytes(signed_message.signature), 0,'0.1 ether',{"from":owner, 'value': '64.1 ether'})
 
     # test
     print("Transfer 0.1 eth as pool revenue")
@@ -127,9 +127,9 @@ def main():
     print("getExitQueueLength:", transparent_ds.getExitQueueLength())
     print("getExitQueue(0,1):", transparent_ds.getExitQueue(0,1))
 
-def digest(nonce, contractAddr, claimaddr, withdrawaddr, pubkeys, signatures):
+def digest(extraData, contractAddr, claimaddr, withdrawaddr, pubkeys, signatures):
     #print(EthAddress(claimaddr))
-    abi = eth_abi.encode_abi(['uint32','address', 'address', 'address'], [nonce, contractAddr, claimaddr, convert.to_address(withdrawaddr)])
+    abi = eth_abi.encode_abi(['uint256','address', 'address', 'address'], [extraData, contractAddr, claimaddr, convert.to_address(withdrawaddr)])
     digest = hashlib.sha256(abi)
 
     for i in range(len(pubkeys)):

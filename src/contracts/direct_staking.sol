@@ -185,6 +185,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      * @dev verify signer of the paramseters
      */
     function verifySigner(
+        uint256 extraData,
         address claimaddr,
         address withdrawaddr,
         bytes[] calldata pubkeys,
@@ -192,7 +193,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         bytes calldata paramsSig) public view returns(bool) {
 
         // params signature verification
-        bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(0, claimaddr, withdrawaddr, pubkeys, signatures));
+        bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(extraData, claimaddr, withdrawaddr, pubkeys, signatures));
         address signer = ECDSA.recover(digest, paramsSig);
 
         return (signer == sysSigner);
@@ -293,7 +294,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
 
         // params signature verification
-        _require(verifySigner(claimaddr, withdrawaddr, pubkeys, signatures, paramsSig), "SIGNER_MISMATCH");
+        _require(verifySigner(extradata, claimaddr, withdrawaddr, pubkeys, signatures, paramsSig), "SIGNER_MISMATCH");
 
         // validity check
         _require(withdrawaddr != address(0x0) &&
@@ -407,13 +408,13 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      * @dev digest params
      */
     function _digest(
-        uint32 nonce,
+        uint256 extraData,
         address claimaddr,
         address withdrawaddr,
         bytes[] calldata pubkeys,
         bytes[] calldata signatures) private view returns (bytes32) {
 
-        bytes32 digest = sha256(abi.encode(nonce, address(this), claimaddr, withdrawaddr));
+        bytes32 digest = sha256(abi.encode(extraData, address(this), claimaddr, withdrawaddr));
 
         for (uint i=0;i<pubkeys.length;i++) {
             digest = sha256(abi.encode(digest, pubkeys[i], signatures[i]));
