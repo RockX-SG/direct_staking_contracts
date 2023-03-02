@@ -1,4 +1,4 @@
-# direct_staking_contracts
+# Direct Staking Contracts
 direct staking contracts
 
 # mainnet deploy
