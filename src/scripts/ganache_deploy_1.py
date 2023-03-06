@@ -36,7 +36,6 @@ def main():
     owner.transfer(transparent_rewardpool.address, '0.1 ethers')
     print("getPendingReward:", transparent_rewardpool.getPendingReward(owner))
     print("getPendingManagerRevenue:", transparent_rewardpool.getPendingManagerRevenue())
-    print("updateReward:", transparent_rewardpool.updateReward({'from':owner}))
     print("getPendingReward:", transparent_rewardpool.getPendingReward(owner))
     print("balance():", transparent_rewardpool.balance())
     print("claimRewards:",transparent_rewardpool.claimRewards(owner, 80000000000000000, {'from':owner}))
