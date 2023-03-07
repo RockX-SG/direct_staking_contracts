@@ -182,6 +182,14 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     }
 
     /**
+     * ======================================================================================
+     * 
+     * VIEW FUNCTIONS
+     * 
+     * ======================================================================================
+     */
+
+    /**
      * @dev verify signer of the paramseters
      */
     function verifySigner(
@@ -198,14 +206,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
         return (signer == sysSigner);
     }
-
-    /**
-     * ======================================================================================
-     * 
-     * VIEW FUNCTIONS
-     * 
-     * ======================================================================================
-     */
 
     /**
      * @dev return registered validator by index
@@ -323,7 +323,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             // deposit to offical contract.
             _deposit(pubkeys[i], signatures[i], withdrawal_credential);
 
-            // join the reward pool once it's deposited to official one.
+            // join the MEV reward pool once it's deposited to official one.
             IRewardPool(rewardPool).joinpool(info.claimAddr, DEPOSIT_SIZE);
         }
 
@@ -335,7 +335,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     }
 
     /**
-     * @dev user exits his validator
+     * @dev users initiates exit for his validator
      */
     function exit(uint256 validatorId) external onlyShanghai {
         ValidatorInfo storage info = validatorRegistry[validatorId];
@@ -345,7 +345,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         info.exiting = true;
         exitQueue.push(validatorId);
 
-        // to leave the reward pool
+        // to leave the MEV reward pool
         IRewardPool(rewardPool).leavepool(info.claimAddr, DEPOSIT_SIZE);
     }
 
