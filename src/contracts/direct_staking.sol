@@ -415,7 +415,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         bytes[] calldata pubkeys,
         bytes[] calldata signatures) private view returns (bytes32) {
 
-        bytes32 digest = sha256(abi.encode(extraData, address(this), claimaddr, withdrawaddr));
+        bytes32 digest = sha256(abi.encode(extraData, address(this), block.chainid, claimaddr, withdrawaddr));
 
         for (uint i=0;i<pubkeys.length;i++) {
             digest = sha256(abi.encode(digest, pubkeys[i], signatures[i]));

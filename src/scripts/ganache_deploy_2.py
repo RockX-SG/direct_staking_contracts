@@ -1,6 +1,7 @@
 from brownie import *
 from brownie import convert
 from brownie.convert import EthAddress
+from brownie.network.state import Chain
 from eth_account.messages import encode_defunct
 from eth_account import Account
 from pathlib import Path
@@ -129,7 +130,7 @@ def main():
 
 def digest(extraData, contractAddr, claimaddr, withdrawaddr, pubkeys, signatures):
     #print(EthAddress(claimaddr))
-    abi = eth_abi.encode_abi(['uint256','address', 'address', 'address'], [extraData, contractAddr, claimaddr, convert.to_address(withdrawaddr)])
+    abi = eth_abi.encode_abi(['uint256','address', 'uint256', 'address', 'address'], [extraData, contractAddr, Chain().id, claimaddr, convert.to_address(withdrawaddr)])
     digest = hashlib.sha256(abi)
 
     for i in range(len(pubkeys)):
