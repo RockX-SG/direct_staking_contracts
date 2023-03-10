@@ -34,10 +34,8 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
     uint256 public constant DEPOSIT_SIZE = 32 ether;
 
-    uint256 private constant MULTIPLIER = 1e18; 
     uint256 private constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
     uint256 private constant SIGNATURE_LENGTH = 96;
-    uint256 private constant PUBKEY_LENGTH = 48;
 
     /**
         Incorrect storage preservation:
@@ -199,6 +197,9 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         bytes[] calldata pubkeys,
         bytes[] calldata signatures,
         bytes calldata paramsSig) public view returns(bool) {
+
+        // do not accept paramsSig.length == 64
+        require(paramsSig.length != 64, "PARAMSIG64");
 
         // params signature verification
         bytes32 digest = ECDSA.toEthSignedMessageHash(_digest(extraData, claimaddr, withdrawaddr, pubkeys, signatures));
