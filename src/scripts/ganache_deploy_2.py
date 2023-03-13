@@ -119,8 +119,8 @@ def main():
 
     print("toggle shanghai switch")
     transparent_ds.toggleShangHai({'from': owner})
-    print("exit")
-    transparent_ds.exit(0, {"from":owner})
+    print("batch exit 2 validators",[0,1])
+    transparent_ds.batchExit([0,1], {"from":owner})
     print("getPendingReward:", transparent_rewardpool.getPendingReward(owner))
     print("transfer 0.1 eth")
     owner.transfer(transparent_rewardpool.address, '0.1 ethers')

@@ -339,15 +339,16 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      * @dev users initiates exit for his validator
      */
     function exit(uint256 validatorId) external onlyShanghai {
-        ValidatorInfo storage info = validatorRegistry[validatorId];
-        require(!info.exiting, "EXITING");
-        require(msg.sender == info.claimAddr, "CLAIM_ADDR_MISMATCH");
+        _exitValidator(validatorId, msg.sender);     
+    }
 
-        info.exiting = true;
-        exitQueue.push(validatorId);
-
-        // to leave the MEV reward pool
-        IRewardPool(rewardPool).leavepool(info.claimAddr, DEPOSIT_SIZE);
+    /**
+     * @dev users initiates batch exit for his validators
+     */
+    function batchExit(uint256 [] memory validatorIds) external onlyShanghai {
+        for (uint i=0;i<validatorIds.length;i++) {
+            _exitValidator(validatorIds[i], msg.sender);
+        }
     }
 
     /** 
@@ -358,6 +359,21 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      * 
      * ======================================================================================
      */
+
+    /**
+     * @dev exit a single validator 
+     */
+    function _exitValidator(uint256 validatorId, address sender) internal {
+         ValidatorInfo storage info = validatorRegistry[validatorId];
+        require(!info.exiting, "EXITING");
+        require(sender == info.claimAddr, "CLAIM_ADDR_MISMATCH");
+
+        info.exiting = true;
+        exitQueue.push(validatorId);
+
+        // to leave the MEV reward pool
+        IRewardPool(rewardPool).leavepool(info.claimAddr, DEPOSIT_SIZE);
+    }
 
     /**
      * @dev Invokes a deposit call to the official Deposit contract
