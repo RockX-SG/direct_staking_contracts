@@ -20,6 +20,10 @@ def test_forceExit(setup_contracts, owner, pubkeys, sigs, signerPrivate, withdra
     transparent_ds, transparent_rewardpool = setup_contracts
     claimAddr = owner.address
 
+    ''' exit a non-existing validator should revert'''
+    with brownie.reverts():
+        transparent_ds.forceExit(0, True, {'from':owner})
+
     ''' sign digest in EIP-191 standard '''
     md = digest(0, transparent_ds.address, claimAddr, withdraw_address, pubkeys, sigs)
     message = encode_defunct(md.digest())
@@ -69,7 +73,6 @@ def test_forceExit2(setup_contracts, owner, pubkeys, sigs, signerPrivate, withdr
     ''' forceExit again should revert '''
     with brownie.reverts("EXITING"):
         transparent_ds.forceExit(0, False, {'from':owner})
-
 
 def digest(extraData, contractAddr, claimaddr, withdrawaddr, pubkeys, signatures):
     #print(EthAddress(claimaddr))

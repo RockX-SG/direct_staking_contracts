@@ -373,6 +373,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     function forceExit(uint256 validatorId, bool exitToClaimAddress) external onlyShanghai onlyRole(DEFAULT_ADMIN_ROLE) {
         ValidatorInfo storage info = validatorRegistry[validatorId];
         require(!info.exiting, "EXITING");
+        require(info.claimAddr != address(0x0), "CLAIM_ADDR_MISMATCH");
 
         info.exiting = true;
         exitQueue.push(validatorId);
