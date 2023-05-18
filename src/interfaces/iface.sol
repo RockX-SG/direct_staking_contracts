@@ -41,4 +41,6 @@ interface IDepositContract {
 interface IRewardPool {
     function joinpool(address claimaddr, uint256 amount) external;
     function leavepool(address claimaddr, uint256 amount) external;
+    function claimRewards(address beneficiary, uint256 amount) external;
+    function claimRewardsFor(address account) external;
 }
