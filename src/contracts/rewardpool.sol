@@ -202,6 +202,27 @@ contract RewardPool is Initializable, PausableUpgradeable, AccessControlUpgradea
         emit Claimed(beneficiary, amount);
     }
 
+    // claimRewardsFor an account, the rewards will be only be claimed to the claim address for safety
+    //  this function plays the role as 'settler for accounts', could only be called by controller contract.
+    function claimRewardsFor(address account) external nonReentrant whenNotPaused onlyRole(CONTROLLER_ROLE) {
+        updateReward();
+
+        UserInfo storage info = userInfo[account];
+
+        // settle current pending distribution
+        info.rewardBalance += (accShare - info.accSharePoint) * info.amount / MULTIPLIER;
+        info.accSharePoint = accShare;
+
+        // account & transfer
+        uint256 amount = info.rewardBalance;
+        info.rewardBalance -= amount;
+        _balanceDecrease(amount);
+        payable(account).sendValue(amount);
+
+        // log
+        emit Claimed(account, amount);
+    }
+
     /**
      * @dev updateReward of tx fee
      */

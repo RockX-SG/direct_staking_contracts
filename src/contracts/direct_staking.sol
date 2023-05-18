@@ -364,6 +364,31 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         }
     }
 
+    /**
+     * @dev admin force to exit a validator, and return it's principal to validator owner,
+     *  optionally to exit unclaimed mev rewards to claim address.
+     *
+     * NOTE: a user must have contact with us to perform this operation.
+     */
+    function forceExit(uint256 validatorId, bool exitToClaimAddress) external onlyShanghai onlyRole(DEFAULT_ADMIN_ROLE) {
+        ValidatorInfo storage info = validatorRegistry[validatorId];
+        require(!info.exiting, "EXITING");
+
+        info.exiting = true;
+        exitQueue.push(validatorId);
+
+        // to leave the MEV reward pool
+        IRewardPool(rewardPool).leavepool(info.claimAddr, DEPOSIT_SIZE);
+
+        // allow to exit to claim address
+        //  condition:
+        //      1. EOA
+        //      2. contracts which accept ETH
+        if (exitToClaimAddress) {
+            IRewardPool(rewardPool).claimRewardsFor(info.claimAddr);
+        }
+    }
+
     /** 
 
      * ======================================================================================
