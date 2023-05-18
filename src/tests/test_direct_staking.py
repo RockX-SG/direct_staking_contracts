@@ -15,14 +15,14 @@ from eth_account.messages import encode_defunct
 from eth_account import Account
 from pathlib import Path
 
-""" test of force exit a validator"""
-def test_forceExit(setup_contracts, owner, pubkeys, sigs, signerPrivate, withdraw_address):
+""" test of emergency exit a validator"""
+def test_emergencyExit(setup_contracts, owner, pubkeys, sigs, signerPrivate, withdraw_address):
     transparent_ds, transparent_rewardpool = setup_contracts
     claimAddr = owner.address
 
     ''' exit a non-existing validator should revert'''
     with brownie.reverts():
-        transparent_ds.forceExit(0, True, {'from':owner})
+        transparent_ds.emergencyExit(0, True, {'from':owner})
 
     ''' non CONTROLLER ROLE initiates claimRewardsFor should revert '''
     with brownie.reverts():
@@ -37,23 +37,23 @@ def test_forceExit(setup_contracts, owner, pubkeys, sigs, signerPrivate, withdra
     ''' Transfer 0.1 eth as MEV revenue '''
     owner.transfer(transparent_rewardpool.address, '0.1 ethers')
 
-    ''' Initiating force exit '''
+    ''' Initiating emergency exit '''
     balanceBeforeExit = owner.balance()
     mevRewards = transparent_rewardpool.getPendingReward(claimAddr)
-    transparent_ds.forceExit(0, True, {'from':owner})
+    transparent_ds.emergencyExit(0, True, {'from':owner})
 
     assert owner.balance() == balanceBeforeExit + mevRewards
     assert transparent_rewardpool.getPendingReward(claimAddr) == 0 
    
-    ''' forceExit again should revert '''
+    ''' emergencyExit again should revert '''
     with brownie.reverts("EXITING"):
-        transparent_ds.forceExit(0, True, {'from':owner})
+        transparent_ds.emergencyExit(0, True, {'from':owner})
 
     with brownie.reverts("EXITING"):
-        transparent_ds.forceExit(0, False, {'from':owner})
+        transparent_ds.emergencyExit(0, False, {'from':owner})
 
-""" test of force exit a validator without mev rewards claiming"""
-def test_forceExit2(setup_contracts, owner, pubkeys, sigs, signerPrivate, withdraw_address):
+""" test of emergency exit a validator without mev rewards claiming"""
+def test_emergencyExit2(setup_contracts, owner, pubkeys, sigs, signerPrivate, withdraw_address):
     transparent_ds, transparent_rewardpool = setup_contracts
     claimAddr = owner.address
 
@@ -66,17 +66,17 @@ def test_forceExit2(setup_contracts, owner, pubkeys, sigs, signerPrivate, withdr
     ''' Transfer 0.1 eth as MEV revenue '''
     owner.transfer(transparent_rewardpool.address, '0.1 ethers')
 
-    ''' Initiating force exit '''
+    ''' Initiating emergency exit '''
     balanceBeforeExit = owner.balance()
     mevRewards = transparent_rewardpool.getPendingReward(claimAddr)
-    transparent_ds.forceExit(0, False, {'from':owner})
+    transparent_ds.emergencyExit(0, False, {'from':owner})
 
     assert owner.balance() == balanceBeforeExit
     assert transparent_rewardpool.getPendingReward(claimAddr) == mevRewards
    
-    ''' forceExit again should revert '''
+    ''' emergencyExit again should revert '''
     with brownie.reverts("EXITING"):
-        transparent_ds.forceExit(0, False, {'from':owner})
+        transparent_ds.emergencyExit(0, False, {'from':owner})
 
 def digest(extraData, contractAddr, claimaddr, withdrawaddr, pubkeys, signatures):
     #print(EthAddress(claimaddr))

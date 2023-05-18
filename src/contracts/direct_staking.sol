@@ -365,12 +365,12 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     }
 
     /**
-     * @dev admin force to exit a validator, and return it's principal to validator owner,
+     * @dev admin exit a validator in emergency, and return it's principal to validator owner,
      *  optionally to exit unclaimed mev rewards to claim address.
      *
      * NOTE: a user must have contact with us to perform this operation.
      */
-    function forceExit(uint256 validatorId, bool exitToClaimAddress) external onlyShanghai onlyRole(DEFAULT_ADMIN_ROLE) {
+    function emergencyExit(uint256 validatorId, bool exitToClaimAddress) external onlyShanghai onlyRole(DEFAULT_ADMIN_ROLE) {
         ValidatorInfo storage info = validatorRegistry[validatorId];
         require(!info.exiting, "EXITING");
         require(info.claimAddr != address(0x0), "CLAIM_ADDR_MISMATCH");
