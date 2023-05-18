@@ -371,6 +371,31 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      * NOTE: a user must have contact with us to perform this operation.
      */
     function emergencyExit(uint256 validatorId, bool exitToClaimAddress) external onlyShanghai onlyRole(DEFAULT_ADMIN_ROLE) {
+        _emergencyExit(validatorId, exitToClaimAddress);
+    }
+
+    /**
+     * @dev batch emergency exit
+     */
+    function batchEmergencyExit(uint256 [] memory validatorIds, bool exitToClaimAddress) external onlyShanghai onlyRole(DEFAULT_ADMIN_ROLE) {
+        for (uint i=0;i<validatorIds.length;i++) {
+            _emergencyExit(validatorIds[i], exitToClaimAddress);
+        }
+    }
+
+    /** 
+
+     * ======================================================================================
+     *
+     * INTERNAL FUNCTIONS
+     *
+     * ======================================================================================
+     */
+
+    /**
+     * @dev emergency exit a validator
+     */
+    function _emergencyExit(uint256 validatorId, bool exitToClaimAddress) internal {
         ValidatorInfo storage info = validatorRegistry[validatorId];
         require(!info.exiting, "EXITING");
         require(info.claimAddr != address(0x0), "CLAIM_ADDR_MISMATCH");
@@ -389,15 +414,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
             IRewardPool(rewardPool).claimRewardsFor(info.claimAddr);
         }
     }
-
-    /** 
-
-     * ======================================================================================
-     * 
-     * INTERNAL FUNCTIONS
-     * 
-     * ======================================================================================
-     */
 
     /**
      * @dev exit a single validator 
