@@ -24,6 +24,10 @@ def test_forceExit(setup_contracts, owner, pubkeys, sigs, signerPrivate, withdra
     with brownie.reverts():
         transparent_ds.forceExit(0, True, {'from':owner})
 
+    ''' non CONTROLLER ROLE initiates claimRewardsFor should revert '''
+    with brownie.reverts():
+        transparent_rewardpool.claimRewardsFor(claimAddr, {'from':accounts[9]})
+
     ''' sign digest in EIP-191 standard '''
     md = digest(0, transparent_ds.address, claimAddr, withdraw_address, pubkeys, sigs)
     message = encode_defunct(md.digest())
