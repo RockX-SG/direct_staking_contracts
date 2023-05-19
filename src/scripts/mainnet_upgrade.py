@@ -14,6 +14,12 @@ def main():
     deployer = accounts.load('mainnet-deployer')
     ### deploy staking contract
     direct_staking_contract = DirectStaking.deploy(
-            {'from': deployer}, publish_source=True
+            {'from': deployer}, publish_source=True)
 
-            )
+    ### deploy reward pool
+    rewardpool_contract = RewardPool.deploy(
+            {'from': deployer}, publish_source=True)
+
+    ### invoke some methods
+    print(direct_staking_contract.DEPOSIT_SIZE())
+    print(rewardpool_contract.CONTROLLER_ROLE())
