@@ -69,7 +69,7 @@ def main():
     print("Granting Role Controller to:", transparent_ds)
     transparent_rewardpool.grantRole(transparent_rewardpool.CONTROLLER_ROLE(), transparent_ds, {'from': owner})
 
-    transparent_ds.setETHDepositContract(ethDepositContract, {'from': owner})
+    #transparent_ds.setETHDepositContract(ethDepositContract, {'from': owner})
     transparent_ds.setRewardPool(transparent_rewardpool, {'from': owner})
     transparent_ds.setSigner(signerPub, {'from': owner})
 

@@ -49,6 +49,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
     uint256 private constant DEPOSIT_AMOUNT_UNIT = 1000000000 wei;
     uint256 private constant SIGNATURE_LENGTH = 96;
+    address public constant ethDepositContract = 0x00000000219ab540356cBB839Cbe05303d7705Fa;
 
     /**
         Incorrect storage preservation:
@@ -74,7 +75,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
     // Always extend storage instead of modifying it
     bytes private DEPOSIT_AMOUNT_LITTLE_ENDIAN;
 
-    address public ethDepositContract;  // ETH 2.0 Deposit contract
+    address public ___ethDepositContract_deprecated___;  // ETH 2.0 Deposit contract(DEPRECATED), use constant instead.
     address public rewardPool; // reward pool address
     address public sysSigner; // the signer for parameters in stake()
 
@@ -172,15 +173,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
         rewardPool = _rewardPool;
 
         emit RewardPoolContractSet(_rewardPool);
-    }
-
-    /**
-     * @dev set eth deposit contract address
-     */
-    function setETHDepositContract(address _ethDepositContract) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        ethDepositContract = _ethDepositContract;
-
-        emit DepositContractSet(_ethDepositContract);
     }
 
     /**
@@ -503,7 +495,6 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
      * ======================================================================================
      */
     event RewardPoolContractSet(address addr);
-    event DepositContractSet(address addr);
     event SignerSet(address addr);
     event Staked(address addr, uint256 amount);
     event ShangHaiStatus(bool status);
