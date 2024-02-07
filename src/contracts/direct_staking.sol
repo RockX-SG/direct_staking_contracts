@@ -328,10 +328,10 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
             // deposit to offical contract.
             _deposit(pubkeys[i], signatures[i], withdrawal_credential);
-
-            // join the MEV reward pool once it's deposited to official one.
-            IRewardPool(rewardPool).joinpool(info.claimAddr, DEPOSIT_SIZE);
         }
+
+        // join the MEV reward pool once it's deposited to official one.
+        IRewardPool(rewardPool).joinpool(claimaddr, DEPOSIT_SIZE*nodesAmount);
 
         // update signedParams to avert repeated use of signature
         signedParams[keccak256(paramsSig)] = true;
