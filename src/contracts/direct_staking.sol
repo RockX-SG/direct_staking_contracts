@@ -291,7 +291,7 @@ contract DirectStaking is Initializable, PausableUpgradeable, AccessControlUpgra
 
         // global check
         _require(!signedParams[keccak256(paramsSig)], "REPLAYED_PARAMS");
-        _require(signatures.length <= 10, "RISKY_DEPOSITS");
+        _require(signatures.length <= 500, "RISKY_DEPOSITS");
         _require(signatures.length == pubkeys.length, "INCORRECT_SUBMITS");
         _require(sysSigner != address(0x0) &&
                 ethDepositContract != address(0x0) &&
